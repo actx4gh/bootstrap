@@ -25,6 +25,7 @@ VALUE = 'value'
 REVISION = 'revision'
 CALLBACK = 'callback'
 MODE = 'mode'
+SPAWN = 'spawn'
 TYPE = 'type'
 SERVER_TYPE = '%s-%s' % (SERVER, TYPE)
 BOOTSTRAP_VERSION = '%s-%s' % (BOOTSTRAP, VERSION)
@@ -74,7 +75,7 @@ SUBCMDS = {
         '%s.%s' % (PRODUCT, UPGRADE): {
             DESC: 'upgrades the specified product to the specified version',
             REQARGS: (PRODUCT, REVISION),
-            OPTARGS: (CALLBACK,)},
+            OPTARGS: (CALLBACK, SPAWN)},
         '%s.%s' % (SERVER, GET): {
             DESC: 'reports the specified server value',
             REQARGS: (KEY,)},
@@ -83,7 +84,7 @@ SUBCMDS = {
             OPTARGS: (MODE,)},
         '%s.%s' % (SERVER, PROVISION): {
             DESC: 'provisions this server',
-            OPTARGS: (CALLBACK,)},
+            OPTARGS: (CALLBACK, SPAWN)},
         '%s.%s' % (SERVER, SET): {
             DESC: 'sets the specified server value',
             REQARGS: (KEY, VALUE)}}
@@ -97,6 +98,8 @@ OPTIONS = {
             DESC: 'configuration value'},
         CALLBACK: {
             DESC: 'a url which should be visited when the upgrade is complete'},
+        SPAWN: {
+            DESC: 'if true the bootstrap command spawns itself'},
         MODE: {
             DESC: 'the bootstrap-compatible server mode'},
         REVISION: {
@@ -206,30 +209,36 @@ class BootStrap(object):
         self.static_config.set(BOOTSTRAP, key, value)
         self.__write_static()
 
-    def server_provision(self, callback=None):
+    def server_provision(self, spawn=True, callback=None):
         """ """
-        dynamic_config = self.__dynamic_config
-        mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
-        filestore(mode_key, PROVISIONING)
-        for product in dynamic_config[PRODUCTS].keys():
-            product_version = dynamic_config[PRODUCTS][product][VERSION]
-            try:
-                self.product_upgrade(product, product_version)
-            except Exception, error:
-                filestore(mode_key, INVALID)
-                if callback:
-                    callback_url = '%s?status=%s&message=%s' % (callback, INVALID, str(error))
-                    read_url(callback_url)
-                if isinstance(error, BootStrapException):
-                    raise error
-                else:
-                    raise Exception("Unhandled exception")
-                   
-        filestore(mode_key, IDLE)
-        if callback:
-            callback_url = '%s?status=%s' % (callback, IDLE)
-            read_url(callback_url)
-        self.__set_product_version_access()
+        if spawn:
+            args = [sys.executable, sys.argv[0], '%s.%s' % (SERVER, PROVISION), False]
+            if callback:
+                args.append(callback)
+            os.spawnv(os.P_NOWAIT, sys.executable, args)
+        else:
+            dynamic_config = self.__dynamic_config
+            mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
+            filestore(mode_key, PROVISIONING)
+            for product in dynamic_config[PRODUCTS].keys():
+                product_version = dynamic_config[PRODUCTS][product][VERSION]
+                try:
+                    self.product_upgrade(product, product_version)
+                except Exception, error:
+                    filestore(mode_key, INVALID)
+                    if callback:
+                        callback_url = '%s?status=%s&message=%s' % (callback, INVALID, str(error))
+                        read_url(callback_url)
+                    if isinstance(error, BootStrapException):
+                        raise error
+                    else:
+                        raise Exception("Unhandled exception")
+                    
+            filestore(mode_key, IDLE)
+            if callback:
+                callback_url = '%s?status=%s' % (callback, IDLE)
+                read_url(callback_url)
+            self.__set_product_version_access()
 
     def server_mode(self, mode=None):
         """ """
@@ -319,33 +328,39 @@ class BootStrap(object):
     def product_test(self, product, test, callback=None):
         """ """
 
-    def product_upgrade(self, product, version, callback=None):
+    def product_upgrade(self, product, version, spawn=True, callback=None):
         """ """
-        dynamic_config = self.__dynamic_config
-        section = product_section(product)
-        mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
-        product_path = '%s/%s/%s' % (DYNAMIC_CONFIG, PRODUCTS, product)
-        upgrade_script = self.static_config.get(section, UPGRADE_SCRIPT)
-        filestore('%s/%s' % (product_path, STATUS), UPGRADING)
-        if not os.path.exists(upgrade_script):
-            raise BootStrapException(INVALID_SCRIPT, upgrade_script)
-        repository = dynamic_config[PRODUCTS][product][REPOSITORY]
-        cmd = [upgrade_script, repository, version]
-        out, err = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
-        out = out.splitlines()
-        if not err:
-            status = VALID
+        if spawn:
+            args = [sys.executable, sys.argv[0], '%s.%s' % (PRODUCT, UPGRADE), product, version, False]
+            if callback:
+                args.append(callback)
+            os.spawnv(os.P_NOWAIT, sys.executable, args)
         else:
-            status = INVALID
-            filestore(mode_key, INVALID)    
-        filestore('%s/%s' % (product_path, STATUS), status)
-        if callback:
-            if status == VALID:
-                callback_url = '%s?product=%s&status=%s&version=%s' % (callback, product, status, version)
-            elif status == INVALID:
-                callback_url = '%s?product=%s&status=%s&version=%s&message=%s' % (callback, product, status, version, str(err))
-            read_url(callback_url)
-        return out
+            dynamic_config = self.__dynamic_config
+            section = product_section(product)
+            mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
+            product_path = '%s/%s/%s' % (DYNAMIC_CONFIG, PRODUCTS, product)
+            upgrade_script = self.static_config.get(section, UPGRADE_SCRIPT)
+            filestore('%s/%s' % (product_path, STATUS), UPGRADING)
+            if not os.path.exists(upgrade_script):
+                raise BootStrapException(INVALID_SCRIPT, upgrade_script)
+            repository = dynamic_config[PRODUCTS][product][REPOSITORY]
+            cmd = [upgrade_script, repository, version]
+            out, err = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
+            out = out.splitlines()
+            if not err:
+                status = VALID
+            else:
+                status = INVALID
+                filestore(mode_key, INVALID)    
+            filestore('%s/%s' % (product_path, STATUS), status)
+            if callback:
+                if status == VALID:
+                    callback_url = '%s?product=%s&status=%s&version=%s' % (callback, product, status, version)
+                elif status == INVALID:
+                    callback_url = '%s?product=%s&status=%s&version=%s&message=%s' % (callback, product, status, version, str(err))
+                read_url(callback_url)
+            return out
 
 # Utilities for bootstrap
 def writable(d, disable=False, enable=False):
