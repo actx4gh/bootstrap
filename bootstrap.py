@@ -25,7 +25,7 @@ VALUE = 'value'
 REVISION = 'revision'
 CALLBACK = 'callback'
 MODE = 'mode'
-SPAWN = 'spawn'
+NOSPAWN = 'nospawn'
 TYPE = 'type'
 SERVER_TYPE = '%s-%s' % (SERVER, TYPE)
 BOOTSTRAP_VERSION = '%s-%s' % (BOOTSTRAP, VERSION)
@@ -75,7 +75,7 @@ SUBCMDS = {
         '%s.%s' % (PRODUCT, UPGRADE): {
             DESC: 'upgrades the specified product to the specified version',
             REQARGS: (PRODUCT, REVISION),
-            OPTARGS: (CALLBACK, SPAWN)},
+            OPTARGS: (CALLBACK, NOSPAWN)},
         '%s.%s' % (SERVER, GET): {
             DESC: 'reports the specified server value',
             REQARGS: (KEY,)},
@@ -84,7 +84,7 @@ SUBCMDS = {
             OPTARGS: (MODE,)},
         '%s.%s' % (SERVER, PROVISION): {
             DESC: 'provisions this server',
-            OPTARGS: (CALLBACK, SPAWN)},
+            OPTARGS: (CALLBACK, NOSPAWN)},
         '%s.%s' % (SERVER, SET): {
             DESC: 'sets the specified server value',
             REQARGS: (KEY, VALUE)}}
@@ -98,8 +98,8 @@ OPTIONS = {
             DESC: 'configuration value'},
         CALLBACK: {
             DESC: 'a url which should be visited when the upgrade is complete'},
-        SPAWN: {
-            DESC: 'if true the bootstrap command spawns itself'},
+        NOSPAWN: {
+            DESC: 'if true the bootstrap command runs the actual command instead of spawning itself'},
         MODE: {
             DESC: 'the bootstrap-compatible server mode'},
         REVISION: {
@@ -209,10 +209,10 @@ class BootStrap(object):
         self.static_config.set(BOOTSTRAP, key, value)
         self.__write_static()
 
-    def server_provision(self, spawn=True, callback=None):
+    def server_provision(self, nospawn=False, callback=None):
         """ """
-        if spawn:
-            args = [sys.executable, sys.argv[0], '%s.%s' % (SERVER, PROVISION), False]
+        if not nospawn:
+            args = [sys.executable, sys.argv[0], '%s.%s' % (SERVER, PROVISION), NOSPAWN]
             if callback:
                 args.append(callback)
             os.spawnv(os.P_NOWAIT, sys.executable, args)
@@ -328,10 +328,10 @@ class BootStrap(object):
     def product_test(self, product, test, callback=None):
         """ """
 
-    def product_upgrade(self, product, version, spawn=True, callback=None):
+    def product_upgrade(self, product, version, nospawn=False, callback=None):
         """ """
-        if spawn:
-            args = [sys.executable, sys.argv[0], '%s.%s' % (PRODUCT, UPGRADE), product, version, False]
+        if not nospawn:
+            args = [sys.executable, sys.argv[0], '%s.%s' % (PRODUCT, UPGRADE), product, version, NOSPAWN]
             if callback:
                 args.append(callback)
             os.spawnv(os.P_NOWAIT, sys.executable, args)
@@ -352,7 +352,7 @@ class BootStrap(object):
                 status = VALID
             else:
                 status = INVALID
-                filestore(mode_key, INVALID)    
+                filestore(mode_key, INVALID)
             filestore('%s/%s' % (product_path, STATUS), status)
             if callback:
                 if status == VALID:
