@@ -5,6 +5,8 @@ import subprocess
 import urllib2
 import sys
 import os
+import fcntl
+
 from ConfigParser import ConfigParser
 
 # Common strings
@@ -129,6 +131,39 @@ SERVER_VALUES = {BOOTSTRAP_VERSION: {STATIC: True }, SERVER_TYPE: {STATIC: True 
 PRODUCT_VALUES = {STATUS: {}, VERSION: {WRITABLE: True}, REPOSITORY: {WRITABLE: True}, UPGRADE_SCRIPT: {STATIC: True}, MODE_SCRIPT: {STATIC: True}}
 
 # Classes
+
+class PidFile(object):
+    """Context manager that locks a pid file.  Implemented as class
+    not generator because daemon.py is calling .__exit__() with no parameters
+    instead of the None, None, None specified by PEP-343."""
+    # pylint: disable=R0903
+
+    def __init__(self, path):
+        self.path = path
+        self.pidfile = None
+
+    def enter(self):
+        self.pidfile = open(self.path, "a+")
+        try:
+            fcntl.flock(self.pidfile.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError:
+            raise SystemExit("Already running according to " + self.path)
+        self.pidfile.seek(0)
+        self.pidfile.truncate()
+        self.pidfile.write(str(os.getpid()))
+        self.pidfile.flush()
+        self.pidfile.seek(0)
+        return self.pidfile
+
+    def exit(self, exc_type=None, exc_value=None, exc_tb=None):
+        try:
+            self.pidfile.close()
+        except IOError, err:
+            # ok if file was just closed elsewhere
+            if err.errno != 9:
+                raise
+        os.remove(self.path)
+
 class BootStrapException(Exception):
     def __init__(self, tag, messages):
         if tag not in ERROR_TAGS:
@@ -150,6 +185,24 @@ class BootStrap(object):
         self.server_values = SERVER_VALUES
         self.product_values = PRODUCT_VALUES
         self.__set_product_version_access()
+        self.pidfile = None
+
+    def __lockon(self):
+        """ Turn on lock for long running commands """
+        if not self.pidfile:
+            self.pidfile = PidFile('%s/%s.lock' % (STATIC_CONFIG, BOOTSTRAP))
+        self.pidfile.enter()
+
+    def __lockoff(self):
+        """ Turn off lock for long running commands """
+        if not self.pidfile:
+            raise(Exception, "bootstrap.__lockoff was called before a lock file exists")
+        self.pidfile.exit()
+
+    @property
+    def __islocked(self):
+        """ Return true if bootstrap lock file exists """
+        return os.path.exists('%s/%s.lock' % (STATIC_CONFIG, BOOTSTRAP))
 
     def __write_static(self):
         """ """
@@ -220,9 +273,7 @@ class BootStrap(object):
             dynamic_config = self.__dynamic_config
             mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
             filestore(mode_key, PROVISIONING)
-            print 'starting to iterate over all products' 
             for product in dynamic_config[PRODUCTS].keys():
-                print 'upgrading product %s' % product
                 product_version = dynamic_config[PRODUCTS][product][VERSION]
                 try:
                     out = self.product_upgrade(product, product_version, NOSPAWN)
@@ -232,8 +283,6 @@ class BootStrap(object):
                         callback_url = '%s?status=%s&message=%s' % (callback, INVALID, str(error))
                         read_url(callback_url)
                     raise(error)
-
-            print 'completed iterating over all products, setting mode to idle' 
             filestore(mode_key, IDLE)
             if callback:
                 callback_url = '%s?status=%s' % (callback, IDLE)
@@ -339,6 +388,11 @@ class BootStrap(object):
                 args.append(callback)
             os.spawnv(os.P_NOWAIT, sys.executable, args)
         else:
+            if self.__islocked:
+                print 
+                sys.stdout.write("Previous lock found, not running upgrade for %s" % product)
+                return
+            self.__lockon()
             dynamic_config = self.__dynamic_config
             section = product_section(product)
             mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
@@ -368,6 +422,7 @@ class BootStrap(object):
                 elif status == INVALID:
                     callback_url = '%s?product=%s&status=%s&version=%s&message=%s' % (callback, product, status, version, str(err))
                 read_url(callback_url)
+            self.__lockoff()
             return out, err
 
 # Utilities for bootstrap
