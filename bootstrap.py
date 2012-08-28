@@ -212,7 +212,7 @@ class BootStrap(object):
     def server_provision(self, nospawn=False, callback=None):
         """ """
         if not nospawn:
-            args = [sys.executable, sys.argv[0], '%s.%s' % (SERVER, PROVISION), NOSPAWN]
+            args = [sys.executable, sys.argv[0], '%s.%s' % (SERVER, PROVISION), True]
             if callback:
                 args.append(callback)
             os.spawnv(os.P_NOWAIT, sys.executable, args)
