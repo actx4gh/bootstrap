@@ -126,7 +126,7 @@ SERVER_TYPE = '%s-%s' % (SERVER, TYPE)
 SERVER_VALUES = {BOOTSTRAP_VERSION: {STATIC: True }, SERVER_TYPE: {STATIC: True }, SERVER_MODE: {WRITABLE: True}}
 
 # Product values
-PRODUCT_VALUES = {VERSION: {WRITABLE: True}, REPOSITORY: {WRITABLE: True}, UPGRADING: {STATIC: True, WRITABLE: True}, UPGRADE_SCRIPT: {STATIC: True}, MODE_SCRIPT: {STATIC: True}, STATUS: {}}
+PRODUCT_VALUES = {STATUS: {}, VERSION: {WRITABLE: True}, REPOSITORY: {WRITABLE: True}, UPGRADE_SCRIPT: {STATIC: True}, MODE_SCRIPT: {STATIC: True}}
 
 # Classes
 class BootStrapException(Exception):
@@ -190,7 +190,7 @@ class BootStrap(object):
             product_repository = filestore('%s/%s' % (product_path, REPOSITORY))
             product_status = filestore('%s/%s' % (product_path, STATUS))
             product_version = filestore('%s/%s' % (product_path, VERSION))
-            dynamic_config[PRODUCTS][product] = { VERSION: product_version, REPOSITORY: product_repository }
+            dynamic_config[PRODUCTS][product] = { VERSION: product_version, REPOSITORY: product_repository, STATUS: product_status }
         return dynamic_config
 
     def server_get(self, key):
