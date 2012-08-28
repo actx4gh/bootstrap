@@ -46,6 +46,7 @@ IDLE = 'idle'
 PRODUCTION = 'production'
 INVALID = 'invalid'
 REPSITORY = 'repository'
+OPERATION = 'operation'
 STATUS = 'status'
 UPGRADING = 'upgrading'
 VALID = 'valid'
@@ -56,6 +57,7 @@ INVALID_VERSION = '%s-%s' % (INVALID, VERSION)
 INVALID_TEST = '%s-%s' % (INVALID, TEST)
 INVALID_MODE = '%s-%s' % (INVALID, MODE)
 INVALID_SCRIPT = '%s-%s' % (INVALID, SCRIPT)
+INVALID_OPERATION = '%s-%s' % (INVALID, OEPRATION)
 REQARGS = 'required command line parameters'
 OPTARGS = 'optional command line parameters'
 WRITABLE = 'writable'
@@ -120,7 +122,7 @@ MODES = {
             DESC: 'The server is in an invalid state that likely requires manual intervention.'}}
 
 # Error tags
-ERROR_TAGS = (INVALID_KEY, INVALID_PRODUCT, INVALID_VERSION, INVALID_TEST, INVALID_MODE, INVALID_SCRIPT)
+ERROR_TAGS = (INVALID_KEY, INVALID_PRODUCT, INVALID_VERSION, INVALID_TEST, INVALID_MODE, INVALID_SCRIPT, INVALID_OPERATION)
 
 # Server values
 BOOTSTRAP_VERSION = '%s-%s' % (BOOTSTRAP, VERSION)
@@ -276,8 +278,7 @@ class BootStrap(object):
             dynamic_config = self.__dynamic_config
             mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
             if self.__islocked:
-                sys.stdout.write("Previous lock found, not running upgrade for %s" % product)
-                return
+                raise BootStrapException(INVALID_OPERATION, "Another command is already running")
             filestore(mode_key, PROVISIONING)
             for product in dynamic_config[PRODUCTS].keys():
                 product_version = dynamic_config[PRODUCTS][product][VERSION]
@@ -395,8 +396,7 @@ class BootStrap(object):
             os.spawnv(os.P_NOWAIT, sys.executable, args)
         else:
             if self.__islocked:
-                sys.stdout.write("Previous lock found, not running upgrade for %s" % product)
-                return
+                raise BootStrapException(INVALID_OPERATION, "Another command is already running")
             self.__lockon()
             dynamic_config = self.__dynamic_config
             section = product_section(product)
