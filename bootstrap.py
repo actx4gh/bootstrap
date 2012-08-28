@@ -23,6 +23,7 @@ PRODUCTS = 'products'
 REPOSITORY = 'repository'
 SERVER = 'server'
 KEY = 'key'
+LASTMESSAGE = 'lastmessage'
 VALUE = 'value'
 REVISION = 'revision'
 CALLBACK = 'callback'
@@ -125,10 +126,10 @@ ERROR_TAGS = (INVALID_KEY, INVALID_PRODUCT, INVALID_VERSION, INVALID_TEST, INVAL
 BOOTSTRAP_VERSION = '%s-%s' % (BOOTSTRAP, VERSION)
 SERVER_MODE = '%s-%s' % (SERVER, MODE)
 SERVER_TYPE = '%s-%s' % (SERVER, TYPE)
-SERVER_VALUES = {BOOTSTRAP_VERSION: {STATIC: True }, SERVER_TYPE: {STATIC: True }, SERVER_MODE: {WRITABLE: True}}
+SERVER_VALUES = {BOOTSTRAP_VERSION: {STATIC: True }, SERVER_TYPE: {STATIC: True }, SERVER_MODE: {WRITABLE: True}, LASTMESSAGE: {WRITABLE: True}}
 
 # Product values
-PRODUCT_VALUES = {STATUS: {}, VERSION: {WRITABLE: True}, REPOSITORY: {WRITABLE: True}, UPGRADE_SCRIPT: {STATIC: True}, MODE_SCRIPT: {STATIC: True}}
+PRODUCT_VALUES = {STATUS: {}, VERSION: {WRITABLE: True}, REPOSITORY: {WRITABLE: True}, UPGRADE_SCRIPT: {STATIC: True}, MODE_SCRIPT: {STATIC: True}, LASTMESSAGE: {WRITABLE: True}}
 
 # Classes
 
@@ -236,6 +237,7 @@ class BootStrap(object):
         """Returns a dict representing the dyanmic config read from disk"""
         dynamic_config = {PRODUCTS: {}}
         dynamic_config[SERVER_MODE] = filestore('%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE))
+        dynamic_config[LASTMESSAGE] = filestore('%s/%s' % (DYNAMIC_CONFIG, LASTMESSAGE))
         if dynamic_config[SERVER_MODE] not in MODES:
             filestore('%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE), UNPROVISIONED)
         for product in os.listdir('%s/%s' % (DYNAMIC_CONFIG, PRODUCTS)):
@@ -243,7 +245,8 @@ class BootStrap(object):
             product_repository = filestore('%s/%s' % (product_path, REPOSITORY))
             product_status = filestore('%s/%s' % (product_path, STATUS))
             product_version = filestore('%s/%s' % (product_path, VERSION))
-            dynamic_config[PRODUCTS][product] = { VERSION: product_version, REPOSITORY: product_repository, STATUS: product_status }
+            product_lastmessage = filestore('%s/%s' % (product_path, LASTMESSAGE))
+            dynamic_config[PRODUCTS][product] = { VERSION: product_version, REPOSITORY: product_repository, STATUS: product_status, LASTMESSAGE: product_lastmessage }
         return dynamic_config
 
     def server_get(self, key):
