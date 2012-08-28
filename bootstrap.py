@@ -261,17 +261,20 @@ class BootStrap(object):
                 cmd = [mode_script,]
                 if mode:
                     cmd.append(mode)
-                out, err = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
+                proc = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+                out, err = proc.communicate()
+                retcode = proc.poll()
                 if out:
                     out = out.splitlines()
                     outs.extend(out)
                 if err:
                     err = err.splitlines()
                     errors.extend(err)
+
         if len(invalid_script_exceptions):
             raise BootStrapException(INVALID_SCRIPT, invalid_script_exceptions)
 
-        return outs
+        return outs, errors
 
     def product_get(self, product, key):
         """ """
@@ -346,9 +349,14 @@ class BootStrap(object):
                 raise BootStrapException(INVALID_SCRIPT, upgrade_script)
             repository = dynamic_config[PRODUCTS][product][REPOSITORY]
             cmd = [upgrade_script, repository, version]
-            out, err = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
-            out = out.splitlines()
-            if not err:
+            proc = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+            out, err = proc.communicate()
+            retcode = proc.poll()
+            if out:
+                out = out.splitlines()
+            if err:
+                err = err.splitlines()
+            if not retcode:
                 status = VALID
             else:
                 status = INVALID
@@ -360,7 +368,7 @@ class BootStrap(object):
                 elif status == INVALID:
                     callback_url = '%s?product=%s&status=%s&version=%s&message=%s' % (callback, product, status, version, str(err))
                 read_url(callback_url)
-            return out
+            return out, err
 
 # Utilities for bootstrap
 def writable(d, disable=False, enable=False):
