@@ -275,6 +275,9 @@ class BootStrap(object):
         else:
             dynamic_config = self.__dynamic_config
             mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
+            if self.__islocked:
+                sys.stdout.write("Previous lock found, not running upgrade for %s" % product)
+                return
             filestore(mode_key, PROVISIONING)
             for product in dynamic_config[PRODUCTS].keys():
                 product_version = dynamic_config[PRODUCTS][product][VERSION]
@@ -392,7 +395,6 @@ class BootStrap(object):
             os.spawnv(os.P_NOWAIT, sys.executable, args)
         else:
             if self.__islocked:
-                print 
                 sys.stdout.write("Previous lock found, not running upgrade for %s" % product)
                 return
             self.__lockon()
