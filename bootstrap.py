@@ -6,6 +6,7 @@ import urllib2
 import sys
 import os
 import fcntl
+from datetime import datetime
 
 from ConfigParser import ConfigParser
 
@@ -403,6 +404,7 @@ class BootStrap(object):
             product_path = '%s/%s/%s' % (DYNAMIC_CONFIG, PRODUCTS, product)
             upgrade_script = self.static_config.get(section, UPGRADE_SCRIPT)
             filestore('%s/%s' % (product_path, STATUS), UPGRADING)
+            filestore('%s/%s' % (product_path, LASTMESSAGE), '%s upgrading to version %s' % (str(datetime.now()), version))
             if not os.path.exists(upgrade_script):
                 raise BootStrapException(INVALID_SCRIPT, upgrade_script)
             repository = dynamic_config[PRODUCTS][product][REPOSITORY]
@@ -416,10 +418,13 @@ class BootStrap(object):
                 err = err.splitlines()
             if not retcode:
                 status = VALID
+                message = '%s upgrading to version %s successful' % (str(datetime.now()), version)
             else:
                 status = INVALID
+                message = '%s upgrading to version %s failed with "%s"' % (str(datetime.now()), version, err)
                 self.server_mode(INVALID)
             filestore('%s/%s' % (product_path, STATUS), status)
+            filestore('%s/%s' % (product_path, LASTMESSAGE), message)
             if callback:
                 if status == VALID:
                     callback_url = '%s?product=%s&status=%s&version=%s' % (callback, product, status, version)
