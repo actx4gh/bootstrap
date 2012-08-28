@@ -212,7 +212,7 @@ class BootStrap(object):
     def server_provision(self, nospawn=False, callback=None):
         """ """
         if not nospawn:
-            args = [sys.executable, sys.argv[0], '%s.%s' % (SERVER, PROVISION), True]
+            args = [sys.executable, sys.argv[0], '%s.%s' % (SERVER, PROVISION), NOSPAWN]
             if callback:
                 args.append(callback)
             os.spawnv(os.P_NOWAIT, sys.executable, args)
@@ -225,7 +225,7 @@ class BootStrap(object):
                 print 'upgrading product %s' % product
                 product_version = dynamic_config[PRODUCTS][product][VERSION]
                 try:
-                    out = self.product_upgrade(product, product_version, nospawn=True)
+                    out = self.product_upgrade(product, product_version, NOSPAWN)
                 except Exception, error:
                     filestore(mode_key, INVALID)
                     if callback:
