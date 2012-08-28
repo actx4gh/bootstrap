@@ -193,7 +193,7 @@ class BootStrap(object):
     def __lockon(self):
         """ Turn on lock for long running commands """
         if not self.pidfile:
-            self.pidfile = PidFile('%s/%s.lock' % (STATIC_CONFIG, BOOTSTRAP))
+            self.pidfile = PidFile('%s/%s.lock' % (DYNAMIC_CONFIG, BOOTSTRAP))
         self.pidfile.enter()
 
     def __lockoff(self):
@@ -205,7 +205,7 @@ class BootStrap(object):
     @property
     def __islocked(self):
         """ Return true if bootstrap lock file exists """
-        return os.path.exists('%s/%s.lock' % (STATIC_CONFIG, BOOTSTRAP))
+        return os.path.exists('%s/%s.lock' % (DYNAMIC_CONFIG, BOOTSTRAP))
 
     def __write_static(self):
         """ """
@@ -279,7 +279,7 @@ class BootStrap(object):
             mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
             if self.__islocked:
                 raise BootStrapException(INVALID_OPERATION, "Another command is already running")
-            filestore(mode_key, PROVISIONING)
+            self.server_mode(PROVISIONING)
             for product in dynamic_config[PRODUCTS].keys():
                 product_version = dynamic_config[PRODUCTS][product][VERSION]
                 try:
@@ -290,7 +290,7 @@ class BootStrap(object):
                         callback_url = '%s?status=%s&message=%s' % (callback, INVALID, str(error))
                         read_url(callback_url)
                     raise(error)
-            filestore(mode_key, IDLE)
+            self.server_mode(IDLE)
             if callback:
                 callback_url = '%s?status=%s' % (callback, IDLE)
                 read_url(callback_url)
@@ -400,7 +400,6 @@ class BootStrap(object):
             self.__lockon()
             dynamic_config = self.__dynamic_config
             section = product_section(product)
-            mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
             product_path = '%s/%s/%s' % (DYNAMIC_CONFIG, PRODUCTS, product)
             upgrade_script = self.static_config.get(section, UPGRADE_SCRIPT)
             filestore('%s/%s' % (product_path, STATUS), UPGRADING)
@@ -419,7 +418,7 @@ class BootStrap(object):
                 status = VALID
             else:
                 status = INVALID
-                filestore(mode_key, INVALID)
+                self.server_mode(INVALID)
             filestore('%s/%s' % (product_path, STATUS), status)
             if callback:
                 if status == VALID:
