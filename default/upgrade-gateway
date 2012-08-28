@@ -1,0 +1,11 @@
+#!/bin/bash
+
+REPOSITORY=$1
+VERSION=$2
+MODE=$3
+
+if [[ -f /datype ]]; then
+    echo "upgrading"
+else
+    echo "installing"
+fi

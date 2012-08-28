@@ -1,0 +1,7 @@
+#!/bin/bash
+
+MODE=$1
+
+if [[ $MODE ]]; then
+    echo "Setting mode to $MODE"
+fi

@@ -220,7 +220,9 @@ class BootStrap(object):
             dynamic_config = self.__dynamic_config
             mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
             filestore(mode_key, PROVISIONING)
+            print 'starting to iterate over all products' 
             for product in dynamic_config[PRODUCTS].keys():
+                print 'upgrading product %s' % product
                 product_version = dynamic_config[PRODUCTS][product][VERSION]
                 try:
                     self.product_upgrade(product, product_version)
@@ -233,7 +235,7 @@ class BootStrap(object):
                         raise error
                     else:
                         raise Exception("Unhandled exception")
-                    
+            print 'completed iterating over all products, setting mode to idle' 
             filestore(mode_key, IDLE)
             if callback:
                 callback_url = '%s?status=%s' % (callback, IDLE)
