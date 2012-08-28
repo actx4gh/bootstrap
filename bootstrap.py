@@ -421,7 +421,10 @@ class BootStrap(object):
                 message = '%s upgrading to version %s successful' % (str(datetime.now()), version)
             else:
                 status = INVALID
-                message = '%s upgrading to version %s failed with "%s"' % (str(datetime.now()), version, err)
+                if err:
+                    message = '%s upgrading to version %s failed with "%s"' % (str(datetime.now()), version, str(err))
+                else:
+                    message = '%s upgrading to version %s failed' % (str(datetime.now()), version)
                 self.server_mode(INVALID)
             filestore('%s/%s' % (product_path, STATUS), status)
             filestore('%s/%s' % (product_path, LASTMESSAGE), message)
