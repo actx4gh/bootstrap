@@ -225,7 +225,7 @@ class BootStrap(object):
                 print 'upgrading product %s' % product
                 product_version = dynamic_config[PRODUCTS][product][VERSION]
                 try:
-                    out = self.product_upgrade(product, product_version)
+                    out = self.product_upgrade(product, product_version, nospawn=True)
                 except Exception, error:
                     filestore(mode_key, INVALID)
                     if callback:
