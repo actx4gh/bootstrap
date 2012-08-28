@@ -225,16 +225,14 @@ class BootStrap(object):
                 print 'upgrading product %s' % product
                 product_version = dynamic_config[PRODUCTS][product][VERSION]
                 try:
-                    self.product_upgrade(product, product_version)
+                    out = self.product_upgrade(product, product_version)
                 except Exception, error:
                     filestore(mode_key, INVALID)
                     if callback:
                         callback_url = '%s?status=%s&message=%s' % (callback, INVALID, str(error))
                         read_url(callback_url)
-                    if isinstance(error, BootStrapException):
-                        raise error
-                    else:
-                        raise Exception("Unhandled exception")
+                    raise(error)
+
             print 'completed iterating over all products, setting mode to idle' 
             filestore(mode_key, IDLE)
             if callback:
@@ -324,7 +322,7 @@ class BootStrap(object):
             for section in self.static_config.sections():
                 if section.startswith(PRODUCT):
                     retval += '%s\n' % section.split(':')[1].lstrip()
-        else:                    
+        else:
             for product in dynamic_config[PRODUCTS].keys():
                 retval += '%s %s\n' % (product, dynamic_config[PRODUCTS][product][VERSION])
         retval = retval.rstrip('\n')

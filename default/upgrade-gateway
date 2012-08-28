@@ -5,7 +5,13 @@ VERSION=$2
 MODE=$3
 
 if [[ -f /datype ]]; then
-    echo "upgrading"
+  /usr/local/storediq/bin/fastupdate.py
 else
-    echo "installing"
+  /spinmini --noreboot TRUNK/STOREDIQ s gw
+fi
+
+if [[ $MODE == production ]]; then
+  service deepfiler start
+elif [[ $MODE == idle ]]; then
+  service deepfiler stop
 fi
