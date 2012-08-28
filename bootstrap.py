@@ -120,19 +120,21 @@ MODES = {
         PRODUCTION: {
             DESC: 'All product services are active.'},
         INVALID: {
-            DESC: 'The server is in an invalid state that likely requires manual intervention.'}}
+            DESC: 'The server is in an invalid state that likely requires manual intervention.'},
+        PROVISIONING: {
+            DESC: 'The server is in the process of a provision operation.'}}
+        
 
-# Error tags
 ERROR_TAGS = (INVALID_KEY, INVALID_PRODUCT, INVALID_VERSION, INVALID_TEST, INVALID_MODE, INVALID_SCRIPT, INVALID_OPERATION)
 
 # Server values
 BOOTSTRAP_VERSION = '%s-%s' % (BOOTSTRAP, VERSION)
 SERVER_MODE = '%s-%s' % (SERVER, MODE)
 SERVER_TYPE = '%s-%s' % (SERVER, TYPE)
-SERVER_VALUES = {BOOTSTRAP_VERSION: {STATIC: True }, SERVER_TYPE: {STATIC: True }, SERVER_MODE: {WRITABLE: True}, LASTMESSAGE: {WRITABLE: True}}
+SERVER_VALUES = {BOOTSTRAP_VERSION: {STATIC: True }, SERVER_TYPE: {STATIC: True }, SERVER_MODE: {WRITABLE: True}, LASTMESSAGE: {}}
 
 # Product values
-PRODUCT_VALUES = {STATUS: {}, VERSION: {WRITABLE: True}, REPOSITORY: {WRITABLE: True}, UPGRADE_SCRIPT: {STATIC: True}, MODE_SCRIPT: {STATIC: True}, LASTMESSAGE: {WRITABLE: True}}
+PRODUCT_VALUES = {STATUS: {}, VERSION: {WRITABLE: True}, REPOSITORY: {WRITABLE: True}, UPGRADE_SCRIPT: {STATIC: True}, MODE_SCRIPT: {STATIC: True}, LASTMESSAGE: {}}
 
 # Classes
 
@@ -264,7 +266,7 @@ class BootStrap(object):
         if not self.static_config.has_option(BOOTSTRAP, key):
             raise BootStrapException(INVALID_KEY, key)
         if not server_values[key].has_key(WRITABLE):
-            raise BootStrapException(INVALID_KEY, '%s is a readonly value' % key)
+            raise BootStrapException(INVALID_OPERATION, '%s is a readonly value' % key)
         self.static_config.set(BOOTSTRAP, key, value)
         self.__write_static()
 
@@ -360,7 +362,7 @@ class BootStrap(object):
         if not self.static_config.has_section(section):
             raise BootStrapException(INVALID_PRODUCT, product)
         if not product_values[key].has_key(WRITABLE):
-                raise BootStrapException(INVALID_KEY, '%s is a readonly value' % key)
+                raise BootStrapException(INVALID_OPERATION, '%s is a readonly value' % key)
         if product_values[key].has_key(STATIC):
             if not self.static_config.has_option(section, key):
                 raise BootStrapException(INVALID_KEY, key)
