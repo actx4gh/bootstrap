@@ -40,6 +40,7 @@ LIST = 'list'
 SCRIPT = 'script'
 TEST = 'test'
 UPGRADE = 'upgrade'
+UPDATING = 'updating'
 PROVISION = 'provision'
 PROVISIONING = 'provisioning'
 UNPROVISIONED = 'unprovisioned'
@@ -67,6 +68,7 @@ STATIC = 'static'
 DESC = 'description'
 UPGRADE_SCRIPT = '%s-%s' % (UPGRADE, SCRIPT)
 MODE_SCRIPT = '%s-%s' % (MODE, SCRIPT)
+MODE_UPDATING = '%s-%s' % (MODE, UPDATING)
 
 
 # Subcommands and options for cli mode
@@ -89,6 +91,7 @@ SUBCMDS = {
             REQARGS: (KEY,)},
         '%s.%s' % (SERVER, MODE): {
             DESC: 'gets or sets the mode of this server',
+            HIDDENARGS: (NOSPAWN,),
             OPTARGS: (MODE,)},
         '%s.%s' % (SERVER, PROVISION): {
             DESC: 'provisions this server',
@@ -124,6 +127,8 @@ MODES = {
             DESC: 'All product services are active.'},
         INVALID: {
             DESC: 'The server is in an invalid state that likely requires manual intervention.'},
+        MODE_UPDATING: {
+            DESC: 'The server mode is in the process of being updated'},
         PROVISIONING: {
             DESC: 'The server is in the process of a provision operation.'}}
         
@@ -305,43 +310,51 @@ class BootStrap(object):
                 args.append(callback)
             os.spawnv(os.P_NOWAIT, sys.executable, args)
             
-    def server_mode(self, mode=None):
+    def server_mode(self, nospawn=False, mode=None):
         """ """
-        dynamic_config = self.__dynamic_config
-        mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
-        if not mode:
-            return dynamic_config[SERVER_MODE].replace('\n', '')
-        elif not mode in MODES.keys():
-            raise BootStrapException(INVALID_MODE, mode)
-        if self.__islocked:
-            raise BootStrapException(INVALID_OPERATION, "Another command is already running")
-        self.__lockon()
-        filestore(mode_key, mode)
-        outs = list()
-        errors = list()
-        invalid_script_exceptions = list()
-        for section in self.static_config.sections():
-            if section.startswith(PRODUCT) and self.static_config.has_option(section, MODE_SCRIPT):
-                mode_script = self.static_config.get(section, MODE_SCRIPT)
-                if not os.path.exists(mode_script):
-                    invalid_script_exceptions.append(mode_script)
-                    continue
-                cmd = [mode_script, mode]
-                proc = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-                out, err = proc.communicate()
-                retcode = proc.poll()
-                if out:
-                    out = out.splitlines()
-                    outs.extend(out)
-                if err:
-                    err = err.splitlines()
-                    errors.extend(err)
+        if nospawn == NOSPAWN:
+            dynamic_config = self.__dynamic_config
+            mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
+            if not mode:
+                return dynamic_config[SERVER_MODE].replace('\n', '')
+            elif not mode in MODES.keys():
+                raise BootStrapException(INVALID_MODE, mode)
+            if self.__islocked:
+                raise BootStrapException(INVALID_OPERATION, "Another command is already running")
+            self.__lockon()
+            filestore(mode_key, mode)
+            outs = list()
+            errors = list()
+            invalid_script_exceptions = list()
+            for section in self.static_config.sections():
+                if section.startswith(PRODUCT) and self.static_config.has_option(section, MODE_SCRIPT):
+                    mode_script = self.static_config.get(section, MODE_SCRIPT)
+                    if not os.path.exists(mode_script):
+                        invalid_script_exceptions.append(mode_script)
+                        continue
+                    cmd = [mode_script, mode]
+                    proc = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+                    out, err = proc.communicate()
+                    retcode = proc.poll()
+                    if out:
+                        out = out.splitlines()
+                        outs.extend(out)
+                    if err:
+                        err = err.splitlines()
+                        errors.extend(err)
 
-        self.__lockoff()
-        if len(invalid_script_exceptions):
-            raise BootStrapException(INVALID_SCRIPT, invalid_script_exceptions)
+            self.__lockoff()
+            if len(invalid_script_exceptions):
+                raise BootStrapException(INVALID_SCRIPT, invalid_script_exceptions)
 
-        return outs, errors
+            return outs, errors
+        else:
+            if nospawn:
+                mode = nospawn
+            args = [sys.executable, sys.argv[0], '%s.%s' % (SERVER, MODE), NOSPAWN]
+            if mode:
+                args.append(mode)
+            os.spawnv(os.P_NOWAIT, sys.executable, args)
 
     def product_get(self, product, key):
         """ """
