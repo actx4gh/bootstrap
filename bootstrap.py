@@ -323,9 +323,7 @@ class BootStrap(object):
                 if not os.path.exists(mode_script):
                     invalid_script_exceptions.append(mode_script)
                     continue
-                cmd = [mode_script,]
-                if mode:
-                    cmd.append(mode)
+                cmd = [mode_script, mode]
                 proc = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
                 out, err = proc.communicate()
                 retcode = proc.poll()
