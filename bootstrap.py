@@ -52,6 +52,7 @@ OPERATION = 'operation'
 STATUS = 'status'
 UPGRADING = 'upgrading'
 VALID = 'valid'
+ERROR = 'error'
 INVALID = 'invalid'
 INVALID_PRODUCT = '%s-%s' % (INVALID, PRODUCT)
 INVALID_KEY = '%s-%s' % (INVALID, KEY)
@@ -60,6 +61,7 @@ INVALID_TEST = '%s-%s' % (INVALID, TEST)
 INVALID_MODE = '%s-%s' % (INVALID, MODE)
 INVALID_SCRIPT = '%s-%s' % (INVALID, SCRIPT)
 INVALID_OPERATION = '%s-%s' % (INVALID, OPERATION)
+SCRIPT_ERROR = '%s-%s' % (SCRIPT, ERROR)
 REQARGS = 'required command line parameters'
 OPTARGS = 'optional command line parameters'
 HIDDENARGS = 'hidden command line parameters'
@@ -133,7 +135,7 @@ MODES = {
             DESC: 'The server is in the process of a provision operation.'}}
         
 
-ERROR_TAGS = (INVALID_KEY, INVALID_PRODUCT, INVALID_VERSION, INVALID_TEST, INVALID_MODE, INVALID_SCRIPT, INVALID_OPERATION)
+ERROR_TAGS = (INVALID_KEY, INVALID_PRODUCT, INVALID_VERSION, INVALID_TEST, INVALID_MODE, INVALID_SCRIPT, INVALID_OPERATION, SCRIPT_ERROR)
 
 # Server values
 BOOTSTRAP_VERSION = '%s-%s' % (BOOTSTRAP, VERSION)
@@ -346,8 +348,9 @@ class BootStrap(object):
             self.__lockoff()
             if len(invalid_script_exceptions):
                 raise BootStrapException(INVALID_SCRIPT, invalid_script_exceptions)
+            if len(errors):
+                raise BootStrapException(SCRIPT_ERROR, errors)
 
-            return outs, errors
         else:
             if nospawn:
                 mode = nospawn
