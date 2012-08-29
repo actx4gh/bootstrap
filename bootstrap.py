@@ -383,7 +383,11 @@ class BootStrap(object):
                     retval += '%s\n' % section.split(':')[1].lstrip()
         else:
             for product in dynamic_config[PRODUCTS].keys():
-                retval += '%s %s\n' % (product, dynamic_config[PRODUCTS][product][VERSION])
+                retval += "%s\t%s\t%s\t%s\t'%s'\n" % (product, 
+                    dynamic_config[PRODUCTS][product][VERSION], 
+                    dynamic_config[PRODUCTS][product][REPOSITORY], 
+                    dynamic_config[PRODUCTS][product][STATUS], 
+                    dynamic_config[PRODUCTS][product][LASTMESSAGE])
         retval = retval.rstrip('\n')
         return retval
 
