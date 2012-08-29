@@ -313,6 +313,9 @@ class BootStrap(object):
             return dynamic_config[SERVER_MODE].replace('\n', '')
         elif not mode in MODES.keys():
             raise BootStrapException(INVALID_MODE, mode)
+        if self.__islocked:
+            raise BootStrapException(INVALID_OPERATION, "Another command is already running")
+        self.__lockon()
         filestore(mode_key, mode)
         outs = list()
         errors = list()
@@ -334,6 +337,7 @@ class BootStrap(object):
                     err = err.splitlines()
                     errors.extend(err)
 
+        self.__lockoff()
         if len(invalid_script_exceptions):
             raise BootStrapException(INVALID_SCRIPT, invalid_script_exceptions)
 
