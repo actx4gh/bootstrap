@@ -2,6 +2,10 @@
 
 MODE=$1
 
-if [[ $MODE ]]; then
-    echo "Setting mode to $MODE"
+if [[ $MODE == production ]]; then
+  service start deepfiler
+elif [[ $MODE == idle ]]; then
+  service stop deepfiler
 fi
+
+
