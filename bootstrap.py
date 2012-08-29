@@ -287,7 +287,7 @@ class BootStrap(object):
             mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
             if self.__islocked:
                 raise BootStrapException(INVALID_OPERATION, "Another command is already running")
-            self.server_mode(PROVISIONING)
+            filestore(mode_key, PROVISIONING)
             for product in dynamic_config[PRODUCTS].keys():
                 product_version = dynamic_config[PRODUCTS][product][VERSION]
                 try:
@@ -298,7 +298,7 @@ class BootStrap(object):
                         callback_url = '%s?status=%s&message=%s' % (callback, INVALID, str(error))
                         read_url(callback_url)
                     raise(error)
-            self.server_mode(IDLE)
+            filestore(mode_key, IDLE)
             if callback:
                 callback_url = '%s?status=%s' % (callback, IDLE)
                 read_url(callback_url)
@@ -425,6 +425,7 @@ class BootStrap(object):
                 raise BootStrapException(INVALID_OPERATION, "Another command is already running")
             self.__lockon()
             dynamic_config = self.__dynamic_config
+            mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
             section = product_section(product)
             product_path = '%s/%s/%s' % (DYNAMIC_CONFIG, PRODUCTS, product)
             upgrade_script = self.static_config.get(section, UPGRADE_SCRIPT)
@@ -450,7 +451,7 @@ class BootStrap(object):
                     message = '%s upgrading to version %s failed with "%s"' % (str(datetime.now()), version, str(err))
                 else:
                     message = '%s upgrading to version %s failed' % (str(datetime.now()), version)
-                self.server_mode(INVALID)
+                filestore(mode_key, INVALID)
             filestore('%s/%s' % (product_path, STATUS), status)
             filestore('%s/%s' % (product_path, LASTMESSAGE), message)
             if callback:
