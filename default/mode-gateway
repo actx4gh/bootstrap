@@ -3,9 +3,9 @@
 MODE=$1
 
 if [[ $MODE == production ]]; then
-  service start deepfiler
+  service deepfiler start
 elif [[ $MODE == idle ]]; then
-  service stop deepfiler
+  service deepfiler stop
 fi
 
 
