@@ -61,6 +61,7 @@ INVALID_SCRIPT = '%s-%s' % (INVALID, SCRIPT)
 INVALID_OPERATION = '%s-%s' % (INVALID, OPERATION)
 REQARGS = 'required command line parameters'
 OPTARGS = 'optional command line parameters'
+HIDDENARGS = 'hidden command line parameters'
 WRITABLE = 'writable'
 STATIC = 'static'
 DESC = 'description'
@@ -81,7 +82,8 @@ SUBCMDS = {
         '%s.%s' % (PRODUCT, UPGRADE): {
             DESC: 'upgrades the specified product to the specified version',
             REQARGS: (PRODUCT, REVISION),
-            OPTARGS: (CALLBACK, NOSPAWN)},
+            HIDDENARGS: (NOSPAWN,),
+            OPTARGS: (CALLBACK)},
         '%s.%s' % (SERVER, GET): {
             DESC: 'reports the specified server value',
             REQARGS: (KEY,)},
@@ -90,7 +92,8 @@ SUBCMDS = {
             OPTARGS: (MODE,)},
         '%s.%s' % (SERVER, PROVISION): {
             DESC: 'provisions this server',
-            OPTARGS: (CALLBACK, NOSPAWN)},
+            HIDDENARGS: (NOSPAWN,),
+            OPTARGS: (CALLBACK,)},
         '%s.%s' % (SERVER, SET): {
             DESC: 'sets the specified server value',
             REQARGS: (KEY, VALUE)}}
@@ -272,12 +275,7 @@ class BootStrap(object):
 
     def server_provision(self, nospawn=False, callback=None):
         """ """
-        if not nospawn:
-            args = [sys.executable, sys.argv[0], '%s.%s' % (SERVER, PROVISION), NOSPAWN]
-            if callback:
-                args.append(callback)
-            os.spawnv(os.P_NOWAIT, sys.executable, args)
-        else:
+        if nospawn == NOSPAWN:
             dynamic_config = self.__dynamic_config
             mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
             if self.__islocked:
@@ -298,7 +296,15 @@ class BootStrap(object):
                 callback_url = '%s?status=%s' % (callback, IDLE)
                 read_url(callback_url)
             self.__set_product_version_access()
-
+        else:
+            # set the callback to use the param given for nospawn, since nospawn is hidden to the user
+            if nospawn:
+                callback = nospawn
+            args = [sys.executable, sys.argv[0], '%s.%s' % (SERVER, PROVISION), NOSPAWN]
+            if callback:
+                args.append(callback)
+            os.spawnv(os.P_NOWAIT, sys.executable, args)
+            
     def server_mode(self, mode=None):
         """ """
         dynamic_config = self.__dynamic_config
@@ -396,12 +402,7 @@ class BootStrap(object):
 
     def product_upgrade(self, product, version, nospawn=False, callback=None):
         """ """
-        if not nospawn:
-            args = [sys.executable, sys.argv[0], '%s.%s' % (PRODUCT, UPGRADE), product, version, NOSPAWN]
-            if callback:
-                args.append(callback)
-            os.spawnv(os.P_NOWAIT, sys.executable, args)
-        else:
+        if nospawn == NOSPAWN:
             if self.__islocked:
                 raise BootStrapException(INVALID_OPERATION, "Another command is already running")
             self.__lockon()
@@ -442,7 +443,15 @@ class BootStrap(object):
                 read_url(callback_url)
             self.__lockoff()
             return out, err
-
+        else:
+            # support hiding nospawn param from user, handle the callback correctly
+            if nospawn:
+                callback = nospawn
+            args = [sys.executable, sys.argv[0], '%s.%s' % (PRODUCT, UPGRADE), product, version, NOSPAWN]
+            if callback:
+                args.append(callback)
+            os.spawnv(os.P_NOWAIT, sys.executable, args)
+            
 # Utilities for bootstrap
 def writable(d, disable=False, enable=False):
     ''' Handles returning True/False + setting/unsetting the writable key on values dicts'''
@@ -546,7 +555,7 @@ def cliparse():
         if optcount < len(cmdinfo[REQARGS]):
             print_subcommand_args_help(subcommand)
             sys.exit(1)
-    elif optcount and not cmdinfo.has_key(REQARGS) and not cmdinfo.has_key(OPTARGS):
+    elif optcount and not cmdinfo.has_key(REQARGS) and not cmdinfo.has_key(OPTARGS) and not cmdinfo.has_key(HIDDENARGS):
         print_subcommand_args_help(subcommand, 0)
         sys.exit(1)
 
@@ -558,8 +567,11 @@ def cliparse():
             pad = 0
         optcount = len(sys.argv[(2 + pad):])
         if optcount > len(cmdinfo[OPTARGS]):
-            print_subcommand_args_help(subcommand, 2)
-            sys.exit(1)
+            # make a best attempt at stripping out hidden args
+            if cmdinfo.has_key(HIDDENARGS):
+                if optcount - len(cmdinfo[HIDDENARGS]) > len(cmdinfo[OPTARGS]):
+                    print_subcommand_args_help(subcommand, 2)
+                    sys.exit(1)
 
     return subcommand, sys.argv[2:]
 
