@@ -204,6 +204,18 @@ class BootStrap(object):
         self.pidfile = None
         self.mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
 
+        # Verify all the helper scripts are present and executable
+        for section in self.static_config.sections():
+            product = product_name(section)
+            if product:
+                for script in UPGRADE_SCRIPT, MODE_SCRIPT:
+                    if self.static_config.has_option(section, script):
+                        filepath = self.static_config.get(section, script)
+                        if not os.path.exists(filepath):
+                            raise BootStrapException(INVALID_SCRIPT, '%s %s' % (product, filepath))
+                        set_executable(filepath)
+
+
     def __lockon(self):
         """ Turn on lock for long running commands """
         if not self.pidfile:
@@ -326,14 +338,9 @@ class BootStrap(object):
             self.__lockon()
             filestore(self.mode_key, MODE_UPDATING)
             errors = {}
-            invalid_script_exceptions = list()
             for section in self.static_config.sections():
                 product = product_name(section)
                 if product and self.static_config.has_option(section, MODE_SCRIPT):
-                    mode_script = self.static_config.get(section, MODE_SCRIPT)
-                    if not os.path.exists(mode_script):
-                        invalid_script_exceptions.append(mode_script)
-                        continue
                     cmd = [mode_script, mode]
                     proc = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
                     out, err = proc.communicate()
@@ -342,9 +349,6 @@ class BootStrap(object):
                         errors[product] = (out, err, retcode)
 
             self.__lockoff()
-            # TODO: roll this into errors dict.
-            if len(invalid_script_exceptions):
-                raise BootStrapException(INVALID_SCRIPT, invalid_script_exceptions)
             
             # Scan for errors and raise an exception
             if len(errors.keys()):
@@ -442,8 +446,6 @@ class BootStrap(object):
             upgrade_script = self.static_config.get(section, UPGRADE_SCRIPT)
             filestore('%s/%s' % (product_path, STATUS), UPGRADING)
             filestore('%s/%s' % (product_path, LASTMESSAGE), '%s upgrading to version %s' % (str(datetime.now()), version))
-            if not os.path.exists(upgrade_script):
-                raise BootStrapException(INVALID_SCRIPT, upgrade_script)
             repository = dynamic_config[PRODUCTS][product][REPOSITORY]
             cmd = [upgrade_script, repository, version]
             proc = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
@@ -492,6 +494,10 @@ def writable(d, disable=False, enable=False):
             return True
     elif enable:
         d[WRITABLE] = True
+
+def set_executable(filepath):
+    if not os.access(filepath, os.X_OK):
+        os.chmod(filepath, 0755)
 
 def read_url(url):
     """ """
@@ -614,9 +620,10 @@ def main():
     """Provides a python bootstrap cli tool"""
     subcommand, reqargs = cliparse()
     noun, verb = subcommand.split('.')
-    bootstrap = BootStrap()
-    bootstrap_func = getattr(bootstrap, '%s_%s' % (noun, verb))
+    # Wrap instantiation of bootstrap
     try:
+        bootstrap = BootStrap()
+        bootstrap_func = getattr(bootstrap, '%s_%s' % (noun, verb))
         res = bootstrap_func(*reqargs)
         if isinstance(res, str):
             print res
