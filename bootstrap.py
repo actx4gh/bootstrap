@@ -47,7 +47,6 @@ UNPROVISIONED = 'unprovisioned'
 IDLE = 'idle'
 PRODUCTION = 'production'
 INVALID = 'invalid'
-REPSITORY = 'repository'
 OPERATION = 'operation'
 STATUS = 'status'
 UPGRADING = 'upgrading'
@@ -71,6 +70,8 @@ DESC = 'description'
 UPGRADE_SCRIPT = '%s-%s' % (UPGRADE, SCRIPT)
 MODE_SCRIPT = '%s-%s' % (MODE, SCRIPT)
 MODE_UPDATING = '%s-%s' % (MODE, UPDATING)
+CMD_RUNNING = 'Another command is already running'
+SUCCESS = 'success' 
 
 
 # Subcommands and options for cli mode
@@ -94,7 +95,7 @@ SUBCMDS = {
         '%s.%s' % (SERVER, MODE): {
             DESC: 'gets or sets the mode of this server',
             HIDDENARGS: (NOSPAWN,),
-            OPTARGS: (MODE,)},
+            OPTARGS: (MODE, CALLBACK)},
         '%s.%s' % (SERVER, PROVISION): {
             DESC: 'provisions this server',
             HIDDENARGS: (NOSPAWN,),
@@ -301,22 +302,22 @@ class BootStrap(object):
         dynamic_config = self.__dynamic_config
         if nospawn == NOSPAWN:
             if self.__islocked:
-                raise BootStrapException(INVALID_OPERATION, "Another command is already running")
+                if callback:
+                    read_url(server_callback(callback, INVALID_OPERATION, CMD_RUNNING))
+                raise BootStrapException(INVALID_OPERATION, CMD_RUNNING)
             filestore(self.mode_key, PROVISIONING)
             for product in dynamic_config[PRODUCTS].keys():
                 product_version = dynamic_config[PRODUCTS][product][VERSION]
                 try:
                     out = self.product_upgrade(product, product_version, NOSPAWN)
                 except Exception, error:
-                    filestore(self.mode_key, INVALID)
                     if callback:
-                        callback_url = '%s?status=%s&message=%s' % (callback, INVALID, str(error))
-                        read_url(callback_url)
+                        read_url(server_callback(callback, INVALID, str(error)))
+                    filestore(self.mode_key, INVALID)
                     raise(error)
             filestore(self.mode_key, IDLE)
             if callback:
-                callback_url = '%s?status=%s' % (callback, IDLE)
-                read_url(callback_url)
+                read_url(server_callback(callback, IDLE))
             self.__set_product_version_access()
         else:
             # set the callback to use the param given for nospawn, since nospawn is hidden to the user
@@ -327,14 +328,18 @@ class BootStrap(object):
                 args.append(callback)
             os.spawnv(os.P_NOWAIT, sys.executable, args)
             
-    def server_mode(self, nospawn=False, mode=None):
+    def server_mode(self, nospawn=False, mode=None, callback=None):
         """ """
         dynamic_config = self.__dynamic_config
         if nospawn == NOSPAWN:
             if not mode in MODES.keys():
+                if callback:
+                    read_url(server_callback(callback, INVALID_MODE, '%s is not a valid mode' % mode))
                 raise BootStrapException(INVALID_MODE, mode)
             if self.__islocked:
-                raise BootStrapException(INVALID_OPERATION, "Another command is already running")
+                if callback:
+                    read_url(server_callback(callback, INVALID_OPERATION, CMD_RUNNING))
+                raise BootStrapException(INVALID_OPERATION, CMD_RUNNING)
             self.__lockon()
             filestore(self.mode_key, MODE_UPDATING)
             errors = {}
@@ -360,19 +365,23 @@ class BootStrap(object):
                             error = '%s %s' % (error, part)
                     if error != '':
                         messages.append(error)
-
+                if callback:
+                    read_url(server_callback(callback, SCRIPT_ERROR, messages))
                 raise BootStrapException(SCRIPT_ERROR, messages)
 
-            # Setting modes for each product worked, update server mode
+            # Setting modes for each product worked, hit call back and update server mode_key
+            if callback:
+                read_url(server_callback(callback, SUCCESS, 'Server mode is not %s' % mode))
             filestore(self.mode_key, mode)
 
         else:
             if not nospawn:
                 return dynamic_config[SERVER_MODE].replace('\n', '')
+            callback = mode
             mode = nospawn
-            args = [sys.executable, sys.argv[0], '%s.%s' % (SERVER, MODE), NOSPAWN]
-            if mode:
-                args.append(mode)
+            args = [sys.executable, sys.argv[0], '%s.%s' % (SERVER, MODE), NOSPAWN, mode]
+            if callback:
+                args.append(callback)
             os.spawnv(os.P_NOWAIT, sys.executable, args)
 
     def product_get(self, product, key):
@@ -438,7 +447,9 @@ class BootStrap(object):
         """ """
         if nospawn == NOSPAWN:
             if self.__islocked:
-                raise BootStrapException(INVALID_OPERATION, "Another command is already running")
+                if callback:
+                    read_url(server_callback(callback, INVALID_OPERATION, CMD_RUNNING))
+                raise BootStrapException(INVALID_OPERATION, CMD_RUNNING)
             self.__lockon()
             dynamic_config = self.__dynamic_config
             section = product_section_name(product)
@@ -469,10 +480,10 @@ class BootStrap(object):
             filestore('%s/%s' % (product_path, LASTMESSAGE), message)
             if callback:
                 if status == VALID:
-                    callback_url = '%s?product=%s&status=%s&version=%s' % (callback, product, status, version)
+                    callback = product_callback(callback, product, status, version)
                 elif status == INVALID:
-                    callback_url = '%s?product=%s&status=%s&version=%s&message=%s' % (callback, product, status, version, str(err))
-                read_url(callback_url)
+                    callback = product_callback(callback, product, status, version, str(err))
+                read_url(callback)
             self.__lockoff()
             return out, err
         else:
@@ -498,6 +509,20 @@ def writable(d, disable=False, enable=False):
 def set_executable(filepath):
     if not os.access(filepath, os.X_OK):
         os.chmod(filepath, 0755)
+
+def product_callback(url, product, version, status, message):
+    """ Return a callback url formatted for CloudIQ """ 
+    callback = '%s?status=%s' % (url, status)
+    if message:
+        callback += '&message=%s' % message
+    return callback
+
+def server_callback(url, status, message):
+    """ Return a callback url formatted for CloudIQ """ 
+    callback = '%s?status=%s' % (url, status)
+    if message:
+        callback += '&message=%s' % message
+    return callback
 
 def read_url(url):
     """ """
