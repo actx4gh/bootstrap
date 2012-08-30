@@ -314,8 +314,8 @@ class BootStrap(object):
             
     def server_mode(self, nospawn=False, mode=None):
         """ """
+        dynamic_config = self.__dynamic_config
         if nospawn == NOSPAWN:
-            dynamic_config = self.__dynamic_config
             mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
             if not mode in MODES.keys():
                 raise BootStrapException(INVALID_MODE, mode)
