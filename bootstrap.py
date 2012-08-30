@@ -497,9 +497,9 @@ class BootStrap(object):
             filestore('%s/%s' % (product_path, LASTMESSAGE), message)
             if callback:
                 if status == VALID:
-                    callback = product_callback(callback, product, status, version)
+                    callback = product_callback(callback, product, version, status)
                 elif status == INVALID:
-                    callback = product_callback(callback, product, status, version, str(err))
+                    callback = product_callback(callback, product, version, status, str(err))
                 read_url(callback)
             self.__lockoff()
             return out, err
