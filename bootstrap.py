@@ -202,6 +202,7 @@ class BootStrap(object):
         self.product_values = PRODUCT_VALUES
         self.__set_product_version_access()
         self.pidfile = None
+        self.mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
 
     def __lockon(self):
         """ Turn on lock for long running commands """
@@ -261,7 +262,10 @@ class BootStrap(object):
             product_status = filestore('%s/%s' % (product_path, STATUS))
             product_version = filestore('%s/%s' % (product_path, VERSION))
             product_lastmessage = filestore('%s/%s' % (product_path, LASTMESSAGE))
-            dynamic_config[PRODUCTS][product] = { VERSION: product_version, REPOSITORY: product_repository, STATUS: product_status, LASTMESSAGE: product_lastmessage }
+            dynamic_config[PRODUCTS][product] = { VERSION: product_version,
+                    REPOSITORY: product_repository,
+                    STATUS: product_status,
+                    LASTMESSAGE: product_lastmessage }
         return dynamic_config
 
     def server_get(self, key):
@@ -282,23 +286,22 @@ class BootStrap(object):
 
     def server_provision(self, nospawn=False, callback=None):
         """ """
+        dynamic_config = self.__dynamic_config
         if nospawn == NOSPAWN:
-            dynamic_config = self.__dynamic_config
-            mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
             if self.__islocked:
                 raise BootStrapException(INVALID_OPERATION, "Another command is already running")
-            filestore(mode_key, PROVISIONING)
+            filestore(self.mode_key, PROVISIONING)
             for product in dynamic_config[PRODUCTS].keys():
                 product_version = dynamic_config[PRODUCTS][product][VERSION]
                 try:
                     out = self.product_upgrade(product, product_version, NOSPAWN)
                 except Exception, error:
-                    filestore(mode_key, INVALID)
+                    filestore(self.mode_key, INVALID)
                     if callback:
                         callback_url = '%s?status=%s&message=%s' % (callback, INVALID, str(error))
                         read_url(callback_url)
                     raise(error)
-            filestore(mode_key, IDLE)
+            filestore(self.mode_key, IDLE)
             if callback:
                 callback_url = '%s?status=%s' % (callback, IDLE)
                 read_url(callback_url)
@@ -316,18 +319,17 @@ class BootStrap(object):
         """ """
         dynamic_config = self.__dynamic_config
         if nospawn == NOSPAWN:
-            mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
             if not mode in MODES.keys():
                 raise BootStrapException(INVALID_MODE, mode)
             if self.__islocked:
                 raise BootStrapException(INVALID_OPERATION, "Another command is already running")
             self.__lockon()
-            filestore(mode_key, mode)
-            outs = list()
-            errors = list()
+            filestore(self.mode_key, MODE_UPDATING)
+            errors = {}
             invalid_script_exceptions = list()
             for section in self.static_config.sections():
-                if section.startswith(PRODUCT) and self.static_config.has_option(section, MODE_SCRIPT):
+                product = product_name(section)
+                if product and self.static_config.has_option(section, MODE_SCRIPT):
                     mode_script = self.static_config.get(section, MODE_SCRIPT)
                     if not os.path.exists(mode_script):
                         invalid_script_exceptions.append(mode_script)
@@ -336,18 +338,29 @@ class BootStrap(object):
                     proc = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
                     out, err = proc.communicate()
                     retcode = proc.poll()
-                    if out:
-                        out = out.splitlines()
-                        outs.extend(out)
-                    if err:
-                        err = err.splitlines()
-                        errors.extend(err)
+                    if retcode:
+                        errors[product] = (out, err, retcode)
 
             self.__lockoff()
+            # TODO: roll this into errors dict.
             if len(invalid_script_exceptions):
                 raise BootStrapException(INVALID_SCRIPT, invalid_script_exceptions)
-            if len(errors):
-                raise BootStrapException(SCRIPT_ERROR, errors)
+            
+            # Scan for errors and raise an exception
+            if len(errors.keys()):
+                messages = []
+                for product in errors.keys():
+                    error = ''
+                    for part in errors[product]:
+                        if part:
+                            error = '%s %s' % (error, part)
+                    if error != '':
+                        messages.append(error)
+
+                raise BootStrapException(SCRIPT_ERROR, messages)
+
+            # Setting modes for each product worked, update server mode
+            filestore(self.mode_key, mode)
 
         else:
             if not nospawn:
@@ -362,7 +375,7 @@ class BootStrap(object):
         """ """
         dynamic_config = self.__dynamic_config
         product_values = self.product_values
-        section = product_section(product)
+        section = product_section_name(product)
         if not product_values.has_key(key):
             raise BootStrapException(INVALID_KEY, key)
         if product_values[key].has_key(STATIC):
@@ -381,7 +394,7 @@ class BootStrap(object):
         """ """
         dynamic_config = self.__dynamic_config
         product_values = self.product_values
-        section = product_section(product)
+        section = product_section_name(product)
         if not self.static_config.has_section(section):
             raise BootStrapException(INVALID_PRODUCT, product)
         if not product_values[key].has_key(WRITABLE):
@@ -424,8 +437,7 @@ class BootStrap(object):
                 raise BootStrapException(INVALID_OPERATION, "Another command is already running")
             self.__lockon()
             dynamic_config = self.__dynamic_config
-            mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
-            section = product_section(product)
+            section = product_section_name(product)
             product_path = '%s/%s/%s' % (DYNAMIC_CONFIG, PRODUCTS, product)
             upgrade_script = self.static_config.get(section, UPGRADE_SCRIPT)
             filestore('%s/%s' % (product_path, STATUS), UPGRADING)
@@ -450,7 +462,7 @@ class BootStrap(object):
                     message = '%s upgrading to version %s failed with "%s"' % (str(datetime.now()), version, str(err))
                 else:
                     message = '%s upgrading to version %s failed' % (str(datetime.now()), version)
-                filestore(mode_key, INVALID)
+                filestore(self.mode_key, INVALID)
             filestore('%s/%s' % (product_path, STATUS), status)
             filestore('%s/%s' % (product_path, LASTMESSAGE), message)
             if callback:
@@ -469,7 +481,7 @@ class BootStrap(object):
             if callback:
                 args.append(callback)
             os.spawnv(os.P_NOWAIT, sys.executable, args)
-            
+
 # Utilities for bootstrap
 def writable(d, disable=False, enable=False):
     ''' Handles returning True/False + setting/unsetting the writable key on values dicts'''
@@ -489,9 +501,14 @@ def read_url(url):
     data = response.read()
     return data
 
-def product_section(product):
+def product_section_name(product):
     """ """
     return '%s: %s' % (PRODUCT, product)
+
+def product_name(section):
+    """ return a product name given a section value """
+    if section.startswith(PRODUCT):
+        return section.split(':')[1].lstrip()
 
 def filestore(filepath, value=None, delete_on_null=False):
     """ Handle using a plain text file to store/retrieve values """
