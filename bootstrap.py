@@ -529,7 +529,7 @@ def set_executable(filepath):
 
 def product_callback(url, product, version, status, message):
     """ Return a callback url formatted for CloudIQ """ 
-    callback = '%s?status=%s' % (url, status)
+    callback = '%s?product=%s&version=%s&status=%s' % (url, product, version, status)
     if message:
         callback += '&message=%s' % message
     return callback
