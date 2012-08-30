@@ -317,9 +317,7 @@ class BootStrap(object):
         if nospawn == NOSPAWN:
             dynamic_config = self.__dynamic_config
             mode_key = '%s/%s' % (DYNAMIC_CONFIG, SERVER_MODE)
-            if not mode:
-                return dynamic_config[SERVER_MODE].replace('\n', '')
-            elif not mode in MODES.keys():
+            if not mode in MODES.keys():
                 raise BootStrapException(INVALID_MODE, mode)
             if self.__islocked:
                 raise BootStrapException(INVALID_OPERATION, "Another command is already running")
@@ -352,8 +350,9 @@ class BootStrap(object):
                 raise BootStrapException(SCRIPT_ERROR, errors)
 
         else:
-            if nospawn:
-                mode = nospawn
+            if not nospawn:
+                return dynamic_config[SERVER_MODE].replace('\n', '')
+            mode = nospawn
             args = [sys.executable, sys.argv[0], '%s.%s' % (SERVER, MODE), NOSPAWN]
             if mode:
                 args.append(mode)
