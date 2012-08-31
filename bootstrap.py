@@ -2,12 +2,12 @@
 # TODO Break out into multiple modules
 # TODO Support windows?
 import subprocess
-import urllib2
+from urllib2 import urlopen, Request
+from urllib import urlencode
 import sys
 import os
 import fcntl
 from datetime import datetime
-
 from ConfigParser import ConfigParser
 
 # Common strings
@@ -25,6 +25,7 @@ REPOSITORY = 'repository'
 SERVER = 'server'
 KEY = 'key'
 LASTMESSAGE = 'lastmessage'
+MESSAGE = 'message'
 VALUE = 'value'
 REVISION = 'revision'
 CALLBACK = 'callback'
@@ -320,7 +321,7 @@ class BootStrap(object):
         if nospawn == NOSPAWN:
             if self.__islocked:
                 if callback:
-                    read_url(server_callback(callback, INVALID_OPERATION, CMD_RUNNING))
+                    read_url(callback, server_callback_params(INVALID_OPERATION, CMD_RUNNING))
                 raise BootStrapException(INVALID_OPERATION, CMD_RUNNING)
             filestore(self.mode_key, PROVISIONING)
             for product in dynamic_config[PRODUCTS].keys():
@@ -329,12 +330,12 @@ class BootStrap(object):
                     out = self.product_upgrade(product, product_version, NOSPAWN)
                 except Exception, error:
                     if callback:
-                        read_url(server_callback(callback, INVALID, str(error)))
+                        read_url(callback, server_callback_params(INVALID, str(error)))
                     filestore(self.mode_key, INVALID)
                     raise(error)
             filestore(self.mode_key, IDLE)
             if callback:
-                read_url(server_callback(callback, IDLE))
+                read_url(callback, server_callback_params(IDLE))
             self.__set_product_version_access()
         else:
             # set the callback to use the param given for nospawn, since nospawn is hidden to the user
@@ -351,11 +352,11 @@ class BootStrap(object):
         if nospawn == NOSPAWN:
             if not mode in MODES.keys():
                 if callback:
-                    read_url(server_callback(callback, INVALID_MODE, '%s is not a valid mode' % mode))
+                    read_url(callback, server_callback_params(INVALID_MODE, '%s is not a valid mode' % mode))
                 raise BootStrapException(INVALID_MODE, mode)
             if self.__islocked:
                 if callback:
-                    read_url(server_callback(callback, INVALID_OPERATION, CMD_RUNNING))
+                    read_url(callback, server_callback_params(INVALID_OPERATION, CMD_RUNNING))
                 raise BootStrapException(INVALID_OPERATION, CMD_RUNNING)
             self.__lockon()
             filestore(self.mode_key, MODE_UPDATING)
@@ -384,12 +385,12 @@ class BootStrap(object):
                     if error != '':
                         messages.append(error)
                 if callback:
-                    read_url(server_callback(callback, SCRIPT_ERROR, messages))
+                    read_url(callback, server_callback_params(SCRIPT_ERROR, messages))
                 raise BootStrapException(SCRIPT_ERROR, messages)
 
             # Setting modes for each product worked, hit call back and update server mode_key
             if callback:
-                read_url(server_callback(callback, SUCCESS, 'Server mode is now %s' % mode))
+                read_url(callback, server_callback_params(SUCCESS, 'Server mode is now %s' % mode))
             filestore(self.mode_key, mode)
 
         else:
@@ -466,7 +467,7 @@ class BootStrap(object):
         if nospawn == NOSPAWN:
             if self.__islocked:
                 if callback:
-                    read_url(server_callback(callback, INVALID_OPERATION, CMD_RUNNING))
+                    read_url(callback, server_callback_params(INVALID_OPERATION, CMD_RUNNING))
                 raise BootStrapException(INVALID_OPERATION, CMD_RUNNING)
             self.__lockon()
             dynamic_config = self.__dynamic_config
@@ -498,10 +499,10 @@ class BootStrap(object):
             filestore('%s/%s' % (product_path, LASTMESSAGE), message)
             if callback:
                 if status == VALID:
-                    callback = product_callback(callback, product, version, status)
+                    callback_params = product_callback_params(product, version, status)
                 elif status == INVALID:
-                    callback = product_callback(callback, product, version, status, str(err))
-                read_url(callback)
+                    callback_params = product_callback_params(product, version, status, str(err))
+                read_url(callback, callback_params)
             self.__lockoff()
             return out, err
         else:
@@ -528,27 +529,25 @@ def set_executable(filepath):
     if not os.access(filepath, os.X_OK):
         os.chmod(filepath, 0755)
 
-def product_callback(url, product, version, status, message):
-    """ Return a callback url formatted for CloudIQ """ 
-    callback = '%s?product=%s&version=%s&status=%s' % (url, product, version, status)
+def product_callback_params(product, version, status, message):
+    """ Return a callback url formatted for CloudIQ """
+    params = { PRODUCT: product, VERSION: version, STATUS: status }
     if message:
-        callback += '&message=%s' % message
-    return callback
+        params[MESSAGE] = message
+    return params
 
-def server_callback(url, status, message):
+def server_callback_params(status, message):
     """ Return a callback url formatted for CloudIQ """ 
-    callback = '%s?status=%s' % (url, status)
+    params = { STATUS: status }
     if message:
-        callback += '&message=%s' % message
-    return callback
+        params[MESSAGE] = message
+    return params
 
-def read_url(url):
+def read_url(url, params):
     """ """
-    request = urllib2.Request(url)
-    #request.add_header('X-LighthouseToken', YOUR_TOKEN)
-    response = urllib2.urlopen(request)
-    data = response.read()
-    return data
+    params = urlencode(params)
+    f = urlopen(url+'?'+params)
+    return (f.read(), f.code)
 
 def product_section_name(product):
     """ """
