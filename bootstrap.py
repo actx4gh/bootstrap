@@ -363,6 +363,7 @@ class BootStrap(object):
             for section in self.static_config.sections():
                 product = product_name(section)
                 if product and self.static_config.has_option(section, MODE_SCRIPT):
+                    mode_script = self.static_config.get(section, MODE_SCRIPT)
                     cmd = [mode_script, mode]
                     proc = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
                     out, err = proc.communicate()
@@ -388,7 +389,7 @@ class BootStrap(object):
 
             # Setting modes for each product worked, hit call back and update server mode_key
             if callback:
-                read_url(server_callback(callback, SUCCESS, 'Server mode is not %s' % mode))
+                read_url(server_callback(callback, SUCCESS, 'Server mode is now %s' % mode))
             filestore(self.mode_key, mode)
 
         else:
