@@ -395,7 +395,7 @@ class BootStrap(object):
 
             # Setting modes for each product worked, hit call back and update server mode_key
             if callback:
-                read_url(callback, server_callback_params(SUCCESS, 'Server mode is now %s' % mode))
+                read_url(callback, server_callback_params(mode, 'Server mode is now %s' % mode))
             filestore(self.mode_key, mode)
 
         else:
