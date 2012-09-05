@@ -534,14 +534,14 @@ def set_executable(filepath):
     if not os.access(filepath, os.X_OK):
         os.chmod(filepath, 0755)
 
-def product_callback_params(product, version, status, message):
+def product_callback_params(product, version, status, message=None):
     """ Return a callback url formatted for CloudIQ """
     params = { PRODUCT: product, VERSION: version, STATUS: status }
     if message:
         params[MESSAGE] = message
     return params
 
-def server_callback_params(status, message):
+def server_callback_params(status, message=None):
     """ Return a callback url formatted for CloudIQ """ 
     params = { STATUS: status }
     if message:
