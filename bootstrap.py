@@ -516,6 +516,8 @@ class BootStrap(object):
                     callback_params = product_callback_params(product, version, status, str(err))
                 read_url(callback, callback_params)
             self.__lockoff()
+            if status == INVALID:
+				raise BootStrapException(SCRIPT_ERROR, message)
             return out, err
         else:
             # support hiding nospawn param from user, handle the callback correctly
