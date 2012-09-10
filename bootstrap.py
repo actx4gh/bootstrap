@@ -434,7 +434,7 @@ class BootStrap(object):
         if not self.static_config.has_section(section):
             raise BootStrapException(INVALID_PRODUCT, product)
         if not product_values[key].has_key(WRITABLE):
-                raise BootStrapException(INVALID_OPERATION, '%s is a readonly value' % key)
+            raise BootStrapException(INVALID_OPERATION, '%s is a readonly value' % key)
         if product_values[key].has_key(STATIC):
             if not self.static_config.has_option(section, key):
                 raise BootStrapException(INVALID_KEY, key)
