@@ -97,49 +97,49 @@ SUCCESS = 'success'
 
 # Subcommands and options for cli mode
 SUBCMDS = {
-    '%s.%s' % (PRODUCT, SET): {
-        DESC: 'sets the specified configuration value for the specified product',
-        REQARGS: (PRODUCT, KEY, VALUE)},
-    '%s.%s' % (PRODUCT, GET): {
-        DESC: 'reports the specified configuration value for the specified product',
-        REQARGS: (PRODUCT, KEY)},
-    '%s.%s' % (PRODUCT, LIST): {
-        DESC: 'lists the products present on this server along with their current versions (one per line)'},
-    '%s.%s' % (PRODUCT, UPGRADE): {
-        DESC: 'upgrades the specified product to the specified version',
-        REQARGS: (PRODUCT, REVISION),
-        HIDDENARGS: (NOSPAWN,),
-        OPTARGS: (CALLBACK)},
-    '%s.%s' % (SERVER, GET): {
-        DESC: 'reports the specified server value',
-        REQARGS: (KEY,)},
-    '%s.%s' % (SERVER, MODE): {
-        DESC: 'gets or sets the mode of this server',
-        HIDDENARGS: (NOSPAWN,),
-        OPTARGS: (MODE, CALLBACK)},
-    '%s.%s' % (SERVER, PROVISION): {
-        DESC: 'provisions this server',
-        HIDDENARGS: (NOSPAWN,),
-        OPTARGS: (CALLBACK,)},
-    '%s.%s' % (SERVER, SET): {
-        DESC: 'sets the specified server value',
-        REQARGS: (KEY, VALUE)}}
+        '%s.%s' % (PRODUCT, SET): {
+            DESC: 'sets the specified configuration value for the specified product',
+            REQARGS: (PRODUCT, KEY, VALUE)},
+        '%s.%s' % (PRODUCT, GET): {
+            DESC: 'reports the specified configuration value for the specified product',
+            REQARGS: (PRODUCT, KEY)},
+        '%s.%s' % (PRODUCT, LIST): {
+            DESC: 'lists the products present on this server along with their current versions (one per line)'},
+        '%s.%s' % (PRODUCT, UPGRADE): {
+            DESC: 'upgrades the specified product to the specified version',
+            REQARGS: (PRODUCT, REVISION),
+            HIDDENARGS: (NOSPAWN,),
+            OPTARGS: (CALLBACK)},
+        '%s.%s' % (SERVER, GET): {
+            DESC: 'reports the specified server value',
+            REQARGS: (KEY,)},
+        '%s.%s' % (SERVER, MODE): {
+            DESC: 'gets or sets the mode of this server',
+            HIDDENARGS: (NOSPAWN,),
+            OPTARGS: (MODE, CALLBACK)},
+        '%s.%s' % (SERVER, PROVISION): {
+            DESC: 'provisions this server',
+            HIDDENARGS: (NOSPAWN,),
+            OPTARGS: (CALLBACK,)},
+        '%s.%s' % (SERVER, SET): {
+            DESC: 'sets the specified server value',
+            REQARGS: (KEY, VALUE)}}
 
 OPTIONS = {
-    PRODUCT: {
-        DESC: 'product name'},
-    KEY: {
-        DESC: 'configuration key name'},
-    VALUE: {
-        DESC: 'configuration value'},
-    CALLBACK: {
-        DESC: 'a url which should be visited when the upgrade is complete'},
-    NOSPAWN: {
-        DESC: 'if true the bootstrap command runs the actual command instead of spawning itself'},
-    MODE: {
-        DESC: 'the bootstrap-compatible server mode'},
-    REVISION: {
-        DESC: 'product revision'}}
+        PRODUCT: {
+            DESC: 'product name'},
+        KEY: {
+            DESC: 'configuration key name'},
+        VALUE: {
+            DESC: 'configuration value'},
+        CALLBACK: {
+            DESC: 'a url which should be visited when the upgrade is complete'},
+        NOSPAWN: {
+            DESC: 'if true the bootstrap command runs the actual command instead of spawning itself'},
+        MODE: {
+            DESC: 'the bootstrap-compatible server mode'},
+        REVISION: {
+            DESC: 'product revision'}}
 
 # Server modes
 MODES = {
@@ -174,7 +174,7 @@ class PidFile(object):
     Context manager that locks a pid file.  Implemented as class
     not generator because daemon.py is calling .__exit__() with no parameters
     instead of the None, None, None specified by PEP-343.
-
+    
     http://code.activestate.com/recipes/577911-context-manager-for-a-daemon-pid-file/
     """
 
@@ -349,7 +349,7 @@ class BootStrap(object):
             if callback:
                 args.append(callback)
             os.spawnv(os.P_NOWAIT, sys.executable, args)
-
+            
     def server_mode(self, nospawn=False, mode=None, callback=None):
         """ """
         dynamic_config = self.__dynamic_config
@@ -377,7 +377,7 @@ class BootStrap(object):
                         errors[product] = (out, err, retcode)
 
             self.__lockoff()
-
+            
             # Scan for errors and raise an exception
             if len(errors.keys()):
                 messages = []
@@ -456,11 +456,11 @@ class BootStrap(object):
         else:
             for product in dynamic_config[PRODUCTS].keys():
                 retval += "%s\t%s\t%s\t%s\t'%s'\n" % (product, 
-                        dynamic_config[PRODUCTS][product][VERSION], 
-                        dynamic_config[PRODUCTS][product][REPOSITORY], 
-                        dynamic_config[PRODUCTS][product][STATUS], 
-                        dynamic_config[PRODUCTS][product][LASTMESSAGE])
-                retval = retval.rstrip('\n')
+                    dynamic_config[PRODUCTS][product][VERSION], 
+                    dynamic_config[PRODUCTS][product][REPOSITORY], 
+                    dynamic_config[PRODUCTS][product][STATUS], 
+                    dynamic_config[PRODUCTS][product][LASTMESSAGE])
+        retval = retval.rstrip('\n')
         return retval
 
     def product_test(self, product, test, callback=None):
@@ -601,7 +601,6 @@ def print_bootstrap_help():
                 '(', '').replace(
                     ')', '').replace(
                         '\'', '').replace(',', ''))
-
         if SUBCMDS[key].has_key(OPTARGS):
             line = '%s %s' % (line, str(SUBCMDS[key][OPTARGS]).replace(
                 '(', '[').replace(
