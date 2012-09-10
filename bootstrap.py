@@ -601,14 +601,15 @@ def print_bootstrap_help():
                 '(', '').replace(
                     ')', '').replace(
                         '\'', '').replace(',', ''))
-                    if SUBCMDS[key].has_key(OPTARGS):
-                        line = '%s %s' % (line, str(SUBCMDS[key][OPTARGS]).replace(
-                            '(', '[').replace(
-                                ')', ']').replace(
-                                    '[\'', '[[').replace(
-                                        '\']', ']]').replace(
-                                            ' \'', '[').replace('\',', ']'))
-                                        print '  %s\n%-20s %s' % (line, '', SUBCMDS[key][DESC])
+
+        if SUBCMDS[key].has_key(OPTARGS):
+            line = '%s %s' % (line, str(SUBCMDS[key][OPTARGS]).replace(
+                '(', '[').replace(
+                    ')', ']').replace(
+                        '[\'', '[[').replace(
+                            '\']', ']]').replace(
+                                ' \'', '[').replace('\',', ']'))
+        print '  %s\n%-20s %s' % (line, '', SUBCMDS[key][DESC])
 
 def print_subcommand_args_help(subcommand, argtype=1):
     """Print help for subcommands"""
