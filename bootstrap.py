@@ -239,6 +239,12 @@ class BootStrap(object):
                             raise BootStrapException(INVALID_SCRIPT, '%s %s' % (product, filepath))
                         set_executable(filepath)
 
+    def _get_server_mode(self):
+        openfile = open(self.mode_key, 'r')
+        try:
+            return openfile.read().strip()
+        finally:
+            openfile.close()
 
     def __lockon(self):
         """ Turn on lock for long running commands """
@@ -370,7 +376,7 @@ class BootStrap(object):
                 product = product_name(section)
                 if product and self.static_config.has_option(section, MODE_SCRIPT):
                     mode_script = self.static_config.get(section, MODE_SCRIPT)
-                    cmd = [mode_script, mode]
+                    cmd = '%s %s' % (mode_script, mode)
                     proc = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
                     out, err = proc.communicate()
                     retcode = proc.poll()
@@ -481,8 +487,9 @@ class BootStrap(object):
             upgrade_script = self.static_config.get(section, UPGRADE_SCRIPT)
             filestore('%s/%s' % (product_path, STATUS), UPGRADING)
             filestore('%s/%s' % (product_path, LASTMESSAGE), '%s upgrading to version %s' % (str(datetime.now()), version))
-            repository = dynamic_config[PRODUCTS][product][REPOSITORY]
-            cmd = [upgrade_script, repository, version]
+            repository = '%s/%s/%s/repository' % (DYNAMIC_CONFIG, PRODUCTS, product)
+            mode = self._get_server_mode()
+            cmd = '%s %s %s %s' % (upgrade_script, repository, version, mode)
             proc = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
             out, err = proc.communicate()
             retcode = proc.poll()
