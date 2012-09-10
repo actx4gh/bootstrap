@@ -301,7 +301,7 @@ class BootStrap(object):
                     REPOSITORY: product_repository,
                     STATUS: product_status,
                     LASTMESSAGE: product_lastmessage }
-            return dynamic_config
+        return dynamic_config
 
     def server_get(self, key):
         """Returns a server key value"""
