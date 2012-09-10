@@ -349,7 +349,7 @@ class BootStrap(object):
             if callback:
                 args.append(callback)
             os.spawnv(os.P_NOWAIT, sys.executable, args)
-            
+
     def server_mode(self, nospawn=False, mode=None, callback=None):
         """ """
         dynamic_config = self.__dynamic_config
