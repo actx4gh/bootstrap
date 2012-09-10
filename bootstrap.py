@@ -239,13 +239,6 @@ class BootStrap(object):
                             raise BootStrapException(INVALID_SCRIPT, '%s %s' % (product, filepath))
                         set_executable(filepath)
 
-    def _get_server_mode(self):
-        openfile = open(self.mode_key, 'r')
-        try:
-            return openfile.read().strip()
-        finally:
-            openfile.close()
-
     def __lockon(self):
         """ Turn on lock for long running commands """
         if not self.pidfile:
@@ -488,7 +481,7 @@ class BootStrap(object):
             filestore('%s/%s' % (product_path, STATUS), UPGRADING)
             filestore('%s/%s' % (product_path, LASTMESSAGE), '%s upgrading to version %s' % (str(datetime.now()), version))
             repository = '%s/%s/%s/repository' % (DYNAMIC_CONFIG, PRODUCTS, product)
-            mode = self._get_server_mode()
+            mode = dynamic_config[SERVER_MODE]
             cmd = '%s %s %s %s' % (upgrade_script, repository, version, mode)
             proc = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
             out, err = proc.communicate()
