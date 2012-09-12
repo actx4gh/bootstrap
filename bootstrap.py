@@ -93,8 +93,7 @@ MODE_SCRIPT = '%s-%s' % (MODE, SCRIPT)
 MODE_UPDATING = '%s-%s' % (MODE, UPDATING)
 CMD_RUNNING = 'Another command is already running'
 SUCCESS = 'success' 
-
-
+FIELD_SEPARATOR = '|<>|'
 # Subcommands and options for cli mode
 SUBCMDS = {
         '%s.%s' % (PRODUCT, SET): {
@@ -174,7 +173,7 @@ class PidFile(object):
     Context manager that locks a pid file.  Implemented as class
     not generator because daemon.py is calling .__exit__() with no parameters
     instead of the None, None, None specified by PEP-343.
-    
+    By Graham Poulter
     http://code.activestate.com/recipes/577911-context-manager-for-a-daemon-pid-file/
     """
 
@@ -455,11 +454,11 @@ class BootStrap(object):
                     retval += '%s\n' % section.split(':')[1].lstrip()
         else:
             for product in dynamic_config[PRODUCTS].keys():
-                retval += "%s\t%s\t%s\t%s\t'%s'\n" % (product, 
-                    dynamic_config[PRODUCTS][product][VERSION], 
-                    dynamic_config[PRODUCTS][product][REPOSITORY], 
-                    dynamic_config[PRODUCTS][product][STATUS], 
-                    dynamic_config[PRODUCTS][product][LASTMESSAGE])
+                retval += "%s%s%s%s%s%s%s%s%s%s\n" % (product, FIELD_SEPARATOR, 
+                    dynamic_config[PRODUCTS][product][VERSION], FIELD_SEPARATOR,
+                    dynamic_config[PRODUCTS][product][REPOSITORY], FIELD_SEPARATOR,
+                    dynamic_config[PRODUCTS][product][STATUS], FIELD_SEPARATOR,
+                    dynamic_config[PRODUCTS][product][LASTMESSAGE], FIELD_SEPARATOR)
         retval = retval.rstrip('\n')
         return retval
 
