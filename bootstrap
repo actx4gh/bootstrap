@@ -576,8 +576,8 @@ def filestore(filepath, value=None, delete_on_null=False):
             fo = open(filepath, 'w')
             fo.write(str(value))
         else:
-            fo = open(filepath, 'r')
-            retval = fo.readline().replace('\n', '')
+            with open(filepath, 'r') as fo:
+		retval = fo.read()
         fo.close()
     except Exception, error:
         if fo:
