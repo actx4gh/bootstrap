@@ -220,7 +220,7 @@ class BootStrap(object):
         self.static_config_dict = static_config_dict
         self.static_config = ConfigParser()
         self.static_config.read(self.static_config_file)
-        self.__init_dynamic_config()
+        self.dynamic_config = self.__init_dynamic_config()
         self.server_values = SERVER_VALUES
         self.product_values = PRODUCT_VALUES
         self.__set_product_version_access()
@@ -272,6 +272,7 @@ class BootStrap(object):
         if not os.path.exists(DYNAMIC_CONFIG):
             os.mkdir(DYNAMIC_CONFIG)
             os.mkdir('%s/%s' % (DYNAMIC_CONFIG, PRODUCTS))
+        return self.__dynamic_config
 
     def __set_product_version_access(self):
         """ handle flipping version key to readonly based on the server mode"""
