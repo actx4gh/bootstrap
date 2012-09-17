@@ -468,15 +468,19 @@ class BootStrap(object):
     def product_upgrade(self, product, version, nospawn=False, callback=None):
         """ """
         if nospawn == NOSPAWN:
-            if self.__islocked:
-                if callback:
-                    read_url(callback, server_callback_params(INVALID_OPERATION, CMD_RUNNING))
-                raise BootStrapException(INVALID_OPERATION, CMD_RUNNING)
-            self.__lockon()
+            """ do actual work """
             dynamic_config = self.__dynamic_config
             section = product_section_name(product)
             product_path = '%s/%s/%s' % (DYNAMIC_CONFIG, PRODUCTS, product)
             upgrade_script = self.static_config.get(section, UPGRADE_SCRIPT)
+
+            if self.__islocked:
+                if callback:
+                    filestore('%s/%s' % (product_path, LASTMESSAGE), '%s %s' % (str(datetime.now()), CMD_RUNNING))
+                    callback_params = product_callback_params(product, version, INVALID_OPERATION, CMD_RUNNING)
+                    read_url(callback, callback_params)
+                raise BootStrapException(INVALID_OPERATION, CMD_RUNNING)
+            self.__lockon()
             filestore('%s/%s' % (product_path, STATUS), UPGRADING)
             filestore('%s/%s' % (product_path, LASTMESSAGE), '%s upgrading to version %s' % (str(datetime.now()), version))
             repository = '%s/%s/%s/repository' % (DYNAMIC_CONFIG, PRODUCTS, product)
