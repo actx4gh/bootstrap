@@ -357,6 +357,7 @@ class BootStrap(object):
             if not mode in MODES.keys():
                 if callback:
                     read_url(callback, server_callback_params(INVALID_MODE, '%s is not a valid mode' % mode))
+                self.__set_product_version_access()
                 raise BootStrapException(INVALID_MODE, mode)
             if self.__islocked:
                 if callback:
