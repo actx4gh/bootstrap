@@ -272,6 +272,11 @@ class BootStrap(object):
         if not os.path.exists(DYNAMIC_CONFIG):
             os.mkdir(DYNAMIC_CONFIG)
             os.mkdir('%s/%s' % (DYNAMIC_CONFIG, PRODUCTS))
+            for section in self.static_config.sections():
+                product = product_name(section)
+                if product:
+                    os.mkdir('%s/%s/%s' % (DYNAMIC_CONFIG, PRODUCTS, product))
+
         return self.__dynamic_config
 
     def __set_product_version_access(self):
