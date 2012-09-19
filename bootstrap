@@ -498,6 +498,7 @@ class BootStrap(object):
             if not retcode:
                 status = VALID
                 message = '%s upgrading to version %s successful' % (str(datetime.now()), version)
+                filestore('%s/%s' % (product_path, VERSION), version)
             else:
                 status = INVALID
                 if err:
