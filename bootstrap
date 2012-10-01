@@ -2,7 +2,7 @@
 # TODO Break out into multiple modules
 # TODO Support windows?
 """
-Copyright (C) 2011 Stored IQ Inc, Graham Poulter
+Copyright   (C) 2011 Stored IQ Inc, Graham Poulter
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
 the Software without restriction, including without limitation the rights to
@@ -471,6 +471,9 @@ class BootStrap(object):
         retval = retval.rstrip('\n')
         return retval
 	def hearbeat_checkup_appstack(self):
+	'''
+	heartbeat checkup for the appstack
+	'''
         try:
             cmd = '/siq/bin/invoke-monit  status haproxy'
             p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
