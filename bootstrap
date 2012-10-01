@@ -20,7 +20,8 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """ 
-
+import StringIO
+from subprocess import Popen, PIPE, STDOUT
 import subprocess
 from urllib2 import urlopen
 from urllib import urlencode
@@ -94,6 +95,7 @@ MODE_UPDATING = '%s-%s' % (MODE, UPDATING)
 CMD_RUNNING = 'Another command is already running'
 SUCCESS = 'success' 
 FIELD_SEPARATOR = '|<>|'
+HEARTBEAT = 'heartbeat'
 # Subcommands and options for cli mode
 SUBCMDS = {
         '%s.%s' % (PRODUCT, SET): {
@@ -102,6 +104,8 @@ SUBCMDS = {
         '%s.%s' % (PRODUCT, GET): {
             DESC: 'reports the specified configuration value for the specified product',
             REQARGS: (PRODUCT, KEY)},
+        '%s.%s' % (HEARTBEAT, GET): {
+            DESC: 'gives the heartbeat of the server'},
         '%s.%s' % (PRODUCT, LIST): {
             DESC: 'lists the products present on this server along with their current versions (one per line)'},
         '%s.%s' % (PRODUCT, UPGRADE): {
@@ -468,7 +472,84 @@ class BootStrap(object):
                     dynamic_config[PRODUCTS][product][LASTMESSAGE], FIELD_SEPARATOR)
         retval = retval.rstrip('\n')
         return retval
+        
+	def hearbeat_checkup_appstack(self):
+        try:
+            cmd = '/siq/bin/invoke-monit  status haproxy'
+            p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+            (stdoutdata, stderrdata) = p.communicate(input=None)
+            if stderrdata is not None:
+                return '0'
+            else:
+                string_buffer = StringIO.StringIO(stdoutdata)
+                process = {}
+                len_proces = len('Process')
+                len_sys = len('System')
+                len_status = len('status')
+                service = None
+                status = None
+                for message in string_buffer:
+                    message = message.lstrip()
+                    if message.startswith('Process'):
+                        service = message[len_proces:].strip()
+                    elif message.startswith('System'):
+                        service = message[len_sys:].strip()
+                    elif message.startswith('status'):
+                        status = message[len_status:].strip()
+                    if service and status:
+                        process[service] = status
+                        service = None
+                        status = None
+                string_buffer.close()
+                if len(process) == 0:
+                    return '0'
+                for proc, status in process.iteritems():
+                    if status in ['Running']:
+                        continue
+                    else:
+                        return '0'
+                return '1'
+        except Exception:
+            return '0'
 
+    def hearbeat_checkup_gateway(self):
+        try:
+            cmd = 'service deepfiler status'
+            p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+            (stdoutdata, stderrdata) = p.communicate(input=None)
+            if stderrdata is not None:
+                return '0'
+            else:
+                string_buffer = StringIO.StringIO(stdoutdata)
+                process = {}
+                msg_list = []
+                for message in string_buffer:
+                    message = message.strip()
+                    msg_list = message.split()
+                    if len(msg_list) >= 3 and msg_list[0] in['Process', 'System']:
+                        status = ' '.join(msg_list[2:])
+                        process[msg_list[1]] = status
+                string_buffer.close()
+                if len(process) == 0:
+                    return '0'
+                else:
+                    for proc, msg_list in process.iteritems():
+                        if msg_list in ['running', 'not monitored']:
+                            continue
+                        else:
+                            return '0'
+                    return '1'
+        except Exception:
+            return '0'
+
+
+    def heartbeat_get(self):
+        try:
+            os.stat('/DATYPE')
+        except OSError:
+            return self.hearbeat_checkup_appstack()
+        return self.hearbeat_checkup_gateway()
+	
     def product_test(self, product, test, callback=None):
         """ """
 
