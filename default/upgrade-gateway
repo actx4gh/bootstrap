@@ -13,8 +13,8 @@ if (( $ARGCOUNT < 2 || $ARGCOUNT > 3 )); then
     echo "Invalid number of args"
     echo "$*"
 elif [[ ! $(echo $VERSION|grep "^[0-9A-Z_]\+/[0-9A-Z_]\+-\([0-9]\+\|latest\)$") ]]; then
-    echo "Version $VERSION is not valid"
-    exit 1
+    echo "Version $VERSION is not valid.  Defaulting to TRUNK/STOREDIQ-latest"
+    VERSION=TRUNK/STOREDIQ-latest
 fi
 
 if [[ -f /DATYPE ]]; then
