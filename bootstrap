@@ -19,7 +19,7 @@ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-""" 
+"""
 import StringIO
 from subprocess import Popen, PIPE, STDOUT
 import subprocess
@@ -472,8 +472,8 @@ class BootStrap(object):
                     dynamic_config[PRODUCTS][product][LASTMESSAGE], FIELD_SEPARATOR)
         retval = retval.rstrip('\n')
         return retval
-        
-	def hearbeat_checkup_appstack(self):
+
+    def hearbeat_checkup_appstack(self):
         try:
             cmd = '/siq/bin/invoke-monit  status haproxy'
             p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
