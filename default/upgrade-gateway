@@ -17,7 +17,6 @@ elif [[ ! $(echo $VERSION|grep "^[0-9A-Z_]\+/[0-9A-Z_]\+-\([0-9]\+\|latest\)$") 
     exit 1
 fi
 
-exit 0
 if [[ -f /DATYPE ]]; then
   /usr/local/storediq/bin/fastupdate.py $VERSION
 else
