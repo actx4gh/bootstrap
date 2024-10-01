@@ -35,5 +35,3 @@ High-Level Process:
     Execution: The commands are executed, modifying the server's configuration or performing operations like product upgrades.
     Locking: Long-running commands lock the server using a PID file to prevent concurrent changes.
     Error Reporting: Any issues (invalid keys, modes, or scripts) are caught and reported to the user or a callback system.
-
-This script is likely part of an automated deployment system, enabling a cloud infrastructure to manage the lifecycle of various services and products running on servers.
